@@ -1,100 +1,101 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --background: 288 67% 93%; /* Light Purple */
-    --foreground: 288 30% 20%; /* Dark Purple */
+    --background: 220 20% 97%; /* Very Light Blue-Gray */
+    --foreground: 220 25% 25%; /* Dark Blue-Gray */
 
     --card: 0 0% 100%; /* White */
-    --card-foreground: 288 30% 20%; /* Dark Purple */
+    --card-foreground: 220 25% 25%; /* Dark Blue-Gray */
 
     --popover: 0 0% 100%; /* White */
-    --popover-foreground: 288 30% 20%; /* Dark Purple */
+    --popover-foreground: 220 25% 25%; /* Dark Blue-Gray */
 
-    --primary: 288 100% 60%; /* Vibrant Magenta */
+    --primary: 210 70% 50%; /* Medium Blue */
     --primary-foreground: 0 0% 100%; /* White */
 
-    --secondary: 279 79% 50%; /* Lighter Blue-Violet */
-    --secondary-foreground: 0 0% 100%; /* White */
+    --secondary: 215 50% 75%; /* Lighter Muted Blue */
+    --secondary-foreground: 220 25% 20%; /* Darker Blue-Gray for contrast */
 
-    --muted: 288 60% 88%; /* Lighter Purple */
-    --muted-foreground: 288 30% 55%; /* Grayish Purple */
+    --muted: 220 20% 90%; /* Light Gray-Blue */
+    --muted-foreground: 220 20% 45%; /* Mid Gray-Blue */
 
-    --accent: 279 79% 42%; /* Blue-Violet */
+    --accent: 190 65% 45%; /* Teal/Cyan Accent */
     --accent-foreground: 0 0% 100%; /* White */
 
-    --destructive: 0 84.2% 60.2%; /* Default Red */
+    --destructive: 0 75% 55%; /* A slightly softer Red */
     --destructive-foreground: 0 0% 98%; /* White */
 
-    --border: 288 50% 80%; /* Purple-ish Border */
-    --input: 288 50% 80%; /* Purple-ish Input Background */
-    --ring: 288 100% 70%; /* Lighter Vibrant Magenta for focus rings */
+    --border: 220 20% 85%; /* Gray-Blue Border */
+    --input: 220 20% 88%; /* Light Gray-Blue Input Background (slightly lighter than muted) */
+    --ring: 210 70% 60%; /* Brighter Blue for focus rings */
 
-    --chart-1: 288 100% 60%;
-    --chart-2: 279 79% 50%;
-    --chart-3: 288 80% 70%;
-    --chart-4: 279 60% 60%;
-    --chart-5: 288 70% 50%;
+    --chart-1: 210 70% 50%; /* Medium Blue */
+    --chart-2: 190 65% 45%; /* Teal/Cyan Accent */
+    --chart-3: 215 50% 65%; /* Muted Blue */
+    --chart-4: 220 30% 50%; /* Steel Blue */
+    --chart-5: 200 60% 55%; /* Sky Blue */
     
     --radius: 0.5rem;
 
-    /* Sidebar colors adjusted to match theme, though not explicitly used yet */
-    --sidebar-background: 288 60% 90%;
-    --sidebar-foreground: 288 30% 25%;
-    --sidebar-primary: 288 100% 60%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 279 79% 42%;
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 288 50% 75%;
-    --sidebar-ring: 288 100% 70%;
+    /* Sidebar colors adjusted to match theme */
+    --sidebar-background: 220 15% 92%; /* Slightly darker light blue-gray */
+    --sidebar-foreground: 220 25% 30%; /* Dark blue-gray */
+    --sidebar-primary: 210 70% 50%; /* Medium Blue */
+    --sidebar-primary-foreground: 0 0% 100%; /* White */
+    --sidebar-accent: 190 65% 45%; /* Teal/Cyan Accent */
+    --sidebar-accent-foreground: 0 0% 100%; /* White */
+    --sidebar-border: 220 20% 80%; /* Lighter Gray-Blue Border */
+    --sidebar-ring: 210 70% 60%; /* Brighter Blue for focus rings */
   }
 
   .dark {
-    /* Keeping dark mode variables, but they might need further adjustment if dark mode is a primary feature */
-    --background: 288 10% 10%; /* Dark Purple */
-    --foreground: 288 60% 90%; /* Light Purple */
+    --background: 220 25% 15%; /* Dark Slate Blue */
+    --foreground: 220 15% 85%; /* Light Grayish Blue */
 
-    --card: 288 10% 15%; /* Darker Purple */
-    --card-foreground: 288 60% 90%; /* Light Purple */
+    --card: 220 25% 20%; /* Darker Slate Blue */
+    --card-foreground: 220 15% 85%; /* Light Grayish Blue */
 
-    --popover: 288 10% 15%;
-    --popover-foreground: 288 60% 90%;
+    --popover: 220 25% 20%; /* Darker Slate Blue */
+    --popover-foreground: 220 15% 85%; /* Light Grayish Blue */
 
-    --primary: 288 100% 65%; /* Slightly brighter Magenta for dark mode */
-    --primary-foreground: 288 20% 10%; /* Dark text on primary */
+    --primary: 210 75% 60%; /* Brighter Blue for dark mode */
+    --primary-foreground: 220 10% 10%; /* Very Dark Blue for text on primary */
 
-    --secondary: 279 70% 55%; /* Slightly brighter Blue-Violet */
-    --secondary-foreground: 288 20% 10%;
+    --secondary: 215 40% 50%; /* Muted Dark Blue */
+    --secondary-foreground: 220 15% 90%; /* Light Grayish Blue */
 
-    --muted: 288 10% 25%;
-    --muted-foreground: 288 40% 70%;
+    --muted: 220 20% 30%; /* Darker Gray-Blue */
+    --muted-foreground: 220 15% 65%; /* Lighter Gray-Blue */
 
-    --accent: 279 70% 50%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 190 70% 55%; /* Brighter Teal/Cyan */
+    --accent-foreground: 0 0% 100%; /* White */
 
-    --destructive: 0 70% 50%;
+    --destructive: 0 65% 50%; /* Slightly muted red for dark */
     --destructive-foreground: 0 0% 98%;
 
-    --border: 288 10% 30%;
-    --input: 288 10% 30%;
-    --ring: 288 100% 75%;
+    --border: 220 20% 35%; /* Dark Gray-Blue Border */
+    --input: 220 20% 28%; /* Dark Gray-Blue Input Background (slightly darker than muted) */
+    --ring: 210 75% 65%; /* Brighter Blue for focus rings */
 
-    --chart-1: 288 100% 65%;
-    --chart-2: 279 70% 55%;
-    --chart-3: 288 80% 75%;
-    --chart-4: 279 60% 65%;
-    --chart-5: 288 70% 55%;
+    --chart-1: 210 75% 60%;
+    --chart-2: 190 70% 55%;
+    --chart-3: 215 40% 55%;
+    --chart-4: 220 30% 60%;
+    --chart-5: 200 60% 60%;
 
-    --sidebar-background: 288 10% 12%;
-    --sidebar-foreground: 288 60% 88%;
-    --sidebar-primary: 288 100% 65%;
-    --sidebar-primary-foreground: 288 20% 10%;
-    --sidebar-accent: 279 70% 50%;
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 288 10% 25%;
-    --sidebar-ring: 288 100% 75%;
+    /* Sidebar dark colors */
+    --sidebar-background: 220 20% 18%; /* Darker Slate Blue for sidebar */
+    --sidebar-foreground: 220 15% 80%; /* Light Grayish Blue */
+    --sidebar-primary: 210 75% 60%; /* Brighter Blue */
+    --sidebar-primary-foreground: 220 10% 10%; /* Very Dark Blue */
+    --sidebar-accent: 190 70% 55%; /* Brighter Teal/Cyan */
+    --sidebar-accent-foreground: 0 0% 100%; /* White */
+    --sidebar-border: 220 20% 30%; /* Dark Gray-Blue Border */
+    --sidebar-ring: 210 75% 65%; /* Brighter Blue */
   }
 }
 
@@ -106,3 +107,5 @@
     @apply bg-background text-foreground;
   }
 }
+
+    
