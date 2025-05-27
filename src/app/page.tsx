@@ -14,7 +14,7 @@ import { generatePackingList, type PackingListItem } from "@/ai/flows/generate-p
 import { PackingListDisplay } from "@/components/packing-list-display";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Terminal } from "lucide-react";
+import { Terminal, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -44,17 +44,23 @@ export default function HomePage() {
     setSuggestions(null);
     setCurrentRoutePolyline(null);
     setPackingList(null);
-    setWeatherDataForPacking(null);
+    setWeatherDataForPacking(null); // Reset this too
     setFormData(values);
 
     try {
+      toast({
+        title: "WanderWise AI is Thinking...",
+        description: "Crafting your personalized adventure. This might take a moment!",
+        variant: "default",
+      });
+
       const itineraryPromise = generateItinerary({
         destination: values.destination,
         budget: values.budget,
         interests: values.interests,
       });
 
-      const budgetString = `$${values.budget}`;
+      const budgetString = `$${values.budget}`; // Ensure budget is passed as string for suggestions
       const suggestionsPromise = suggestPlaces({
         destination: values.destination,
         budget: budgetString,
@@ -70,10 +76,10 @@ export default function HomePage() {
         setItinerary(itineraryResult.itinerary);
       } else {
         console.warn("Itinerary generated successfully but is empty or invalid:", itineraryResult);
-        setItinerary([]);
+        setItinerary([]); 
         toast({
           title: "Itinerary Note",
-          description: "The AI couldn't create a detailed schedule. Try adjusting your inputs.",
+          description: "The AI couldn't create a detailed schedule with the provided inputs. Try being more specific or general with your interests!",
           variant: "default",
         });
       }
@@ -86,8 +92,8 @@ export default function HomePage() {
       }
       
       toast({
-        title: "Plan Generated!",
-        description: "Your personalized trip plan is ready. Weather and packing list coming up next...",
+        title: "Adventure Blueprint Ready!",
+        description: "Your itinerary and suggestions are here. Fetching weather and packing list next...",
         variant: "default",
       });
 
@@ -106,11 +112,11 @@ export default function HomePage() {
   };
   
   useEffect(() => {
-    if (itinerary && itinerary.length > 0 && formData && weatherDataForPacking && !loading && !loadingPackingList && !packingList) {
+    if (formData && itinerary && weatherDataForPacking && !loading && !loadingPackingList && packingList === null) {
       const generateAndSetPackingList = async () => {
         setLoadingPackingList(true);
         try {
-          const numDays = itinerary.length;
+          const numDays = itinerary.length > 0 ? itinerary.length : 1; // Default to 1 day if itinerary is empty
           let weatherSummary = `General weather for ${formData.destination}.`;
           if (weatherDataForPacking?.forecasts && weatherDataForPacking.forecasts.length > 0) {
             const todayForecast = weatherDataForPacking.forecasts[0];
@@ -137,7 +143,7 @@ export default function HomePage() {
             });
           } else {
             console.warn("Packing list generated but is empty or invalid:", packingListResponse);
-            setPackingList([]); // Explicitly set to empty array for "no items" message in component
+            setPackingList([]); 
             toast({
               title: "Packing List Note",
               description: "The AI couldn't generate a packing list for this trip. Showing defaults.",
@@ -159,7 +165,7 @@ export default function HomePage() {
       generateAndSetPackingList();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [itinerary, formData, weatherDataForPacking, loading]);
+  }, [itinerary, formData, weatherDataForPacking, loading]); // Removed packingList from deps to avoid re-triggering
 
 
   const handleExportPDF = async (element: HTMLElement | null) => {
@@ -168,18 +174,30 @@ export default function HomePage() {
       return;
     }
 
-    toast({ title: "Generating PDF...", description: "Please wait a moment." });
+    toast({ title: "Generating PDF...", description: "Please wait, this can take a moment." });
 
     try {
+      // Temporarily make all accordion items open for PDF export
+      const accordions = element.querySelectorAll('div[data-state="closed"]');
+      accordions.forEach(acc => (acc as HTMLElement).setAttribute('data-state', 'open'));
+
+      // Allow a brief moment for layout reflow after opening accordions
+      await new Promise(resolve => setTimeout(resolve, 300));
+
+
       const canvas = await html2canvas(element, {
-        scale: 2,
+        scale: 1.5, // Slightly reduced scale for potentially better performance on large content
         useCORS: true,
         logging: true,
         scrollX: 0,
-        scrollY: -window.scrollY,
+        scrollY: -window.scrollY, // Capture from the top of the element
         windowWidth: element.scrollWidth,
         windowHeight: element.scrollHeight,
       });
+
+       // Restore accordion states
+      accordions.forEach(acc => (acc as HTMLElement).setAttribute('data-state', 'closed'));
+
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF({
         orientation: 'portrait',
@@ -189,33 +207,45 @@ export default function HomePage() {
 
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
-
+      
       const imgProps = pdf.getImageProperties(imgData);
       const imgWidth = imgProps.width;
       const imgHeight = imgProps.height;
 
       const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
-      const newImgWidth = imgWidth * ratio;
-      const newImgHeight = imgHeight * ratio;
+      
+      const effectiveImgWidth = imgWidth * ratio;
+      const effectiveImgHeight = imgHeight * ratio;
+      
+      // Calculate number of pages
+      const totalPages = Math.ceil(imgHeight / (pdfHeight/ratio) );
 
-      let position = 0;
-      let currentImgHeight = newImgHeight;
 
-      pdf.addImage(imgData, 'PNG', (pdfWidth - newImgWidth) / 2, 0, newImgWidth, newImgHeight);
-      currentImgHeight -= pdfHeight;
-
-      while (currentImgHeight > 0) {
-        position -= pdfHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', (pdfWidth - newImgWidth) / 2, position, newImgWidth, newImgHeight);
-        currentImgHeight -= pdfHeight;
+      for (let i = 0; i < totalPages; i++) {
+        if (i > 0) pdf.addPage();
+        // Calculate the y position of the image slice for the current page
+        const sourceY = i * (pdfHeight/ratio);
+        pdf.addImage(
+            imgData, 
+            'PNG', 
+            (pdfWidth - effectiveImgWidth) / 2, // Center image
+            0, // Start image at top of page
+            effectiveImgWidth, 
+            effectiveImgHeight,
+            undefined, // alias
+            'FAST', // compression
+            0, // rotation
+            0, // xOffset
+            -sourceY // yOffset on source image (negative to move upwards)
+        );
       }
 
-      pdf.save(`WanderWise_Itinerary_${formData?.destination || 'Trip'}.pdf`);
-      toast({ title: "PDF Exported!", description: "Your itinerary has been saved as a PDF." });
+
+      pdf.save(`WanderWise_Itinerary_${formData?.destination.replace(/[^a-zA-Z0-9]/g, '_') || 'Trip'}.pdf`);
+      toast({ title: "PDF Exported!", description: "Your itinerary has been saved." });
     } catch (e) {
       console.error("Error generating PDF:", e);
-      toast({ title: "PDF Export Failed", description: "An error occurred while generating the PDF.", variant: "destructive" });
+      toast({ title: "PDF Export Failed", description: "An error occurred while generating the PDF. The content might be too complex.", variant: "destructive" });
     }
   };
 
@@ -224,42 +254,46 @@ export default function HomePage() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-background font-sans">
+    <div className="flex flex-col min-h-screen bg-gradient-to-br from-background to-secondary/30 font-sans selection:bg-accent selection:text-accent-foreground">
       <AppHeader />
-      <main className="flex-grow container mx-auto p-4 md:p-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-          <div className="lg:col-span-1 space-y-8">
+      <main className="flex-grow container mx-auto p-4 md:p-6 lg:p-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 items-start">
+          
+          {/* Left Column: Form & Suggestions */}
+          <div className="lg:col-span-1 space-y-6 md:space-y-8 lg:sticky lg:top-24"> {/* Made sticky for better UX */}
             <ItineraryForm onSubmit={handleGeneratePlan} loading={loading} />
-            {loading && !suggestions && (
-              <Card className="shadow-xl">
-                <CardHeader><CardTitle>Loading Suggestions...</CardTitle></CardHeader>
-                <CardContent className="space-y-4">
-                  <Skeleton className="h-8 w-full" />
-                  <Skeleton className="h-20 w-full" />
-                  <Skeleton className="h-20 w-full" />
+            
+            {loading && !suggestions && ( // Skeleton for Suggestions
+              <Card className="shadow-xl animate-pulse">
+                <CardHeader><Skeleton className="h-8 w-3/4 rounded-md" /></CardHeader>
+                <CardContent className="space-y-4 pt-4">
+                  <Skeleton className="h-6 w-full rounded-md" />
+                  <Skeleton className="h-24 w-full rounded-lg" />
+                  <Skeleton className="h-24 w-full rounded-lg" />
                 </CardContent>
               </Card>
             )}
             {suggestions && !loading && <SuggestionsDisplay suggestions={suggestions} />}
           </div>
 
-          <div className="lg:col-span-2 space-y-8">
+          {/* Right Column: Itinerary, Map, Weather, Packing List */}
+          <div className="lg:col-span-2 space-y-6 md:space-y-8">
             {error && (
-              <Alert variant="destructive" className="shadow-md">
-                <Terminal className="h-4 w-4" />
-                <AlertTitle>Oops! Something went wrong.</AlertTitle>
-                <AlertDescription>{error}</AlertDescription>
+              <Alert variant="destructive" className="shadow-xl border-destructive/70 bg-destructive/10">
+                <Terminal className="h-5 w-5" />
+                <AlertTitle className="text-lg font-semibold">Oops! Something Went Wrong.</AlertTitle>
+                <AlertDescription className="text-base">{error}</AlertDescription>
               </Alert>
             )}
 
-            {loading && !itinerary && (
-              <Card className="shadow-xl">
-                <CardHeader><CardTitle>Generating Your Itinerary...</CardTitle></CardHeader>
-                <CardContent className="space-y-4">
-                  <Skeleton className="h-8 w-3/4" />
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-5/6" />
-                  <Skeleton className="h-4 w-full" />
+            {loading && !itinerary && ( // Skeleton for Itinerary
+              <Card className="shadow-xl animate-pulse">
+                <CardHeader><Skeleton className="h-8 w-1/2 rounded-md" /></CardHeader>
+                <CardContent className="space-y-3 pt-4">
+                  <Skeleton className="h-6 w-3/4 rounded-md" />
+                  <Skeleton className="h-5 w-full rounded-md" />
+                  <Skeleton className="h-5 w-5/6 rounded-md" />
+                  <Skeleton className="h-5 w-full rounded-md" />
                 </CardContent>
               </Card>
             )}
@@ -274,24 +308,24 @@ export default function HomePage() {
             )}
 
             {!loading && !itinerary && !error && !formData && (
-                 <Card className="shadow-xl bg-primary/5 border-primary/20">
-                    <CardHeader>
-                        <CardTitle className="text-xl text-primary">Welcome to WanderWise!</CardTitle>
-                        <CardDescription>Fill out the form to start planning your next adventure. Our AI will craft a personalized itinerary just for you.</CardDescription>
+                 <Card className="shadow-2xl bg-gradient-to-tr from-primary/80 to-accent/80 text-primary-foreground border-none transition-all hover:shadow-primary/30 hover:shadow-2xl">
+                    <CardHeader className="pb-3">
+                        <CardTitle className="text-3xl font-extrabold flex items-center gap-2 drop-shadow-md">
+                          <Info size={32}/> Welcome to WanderWise!
+                        </CardTitle>
+                        <CardDescription className="text-primary-foreground/90 text-lg pt-1">Your AI-powered journey planner. Fill the form to begin your adventure!</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <p className="text-muted-foreground">Let's make your travel dreams a reality!</p>
+                        <p className="text-primary-foreground/80 text-base">Let's turn your travel dreams into reality, one smart plan at a time.</p>
                     </CardContent>
                 </Card>
             )}
 
+            {/* Map and Weather - shown once form is submitted or if loading */}
             {formData && (itinerary || loading) && (
               <>
-                {(loading && (!itinerary || itinerary.length === 0)) && (
-                  <>
-                    <Skeleton className="h-[300px] w-full shadow-xl" /> {/* Map Placeholder Skeleton */}
-                    {/* WeatherDisplay will show its own loading skeleton */}
-                  </>
+                {(loading && (!itinerary || itinerary.length === 0)) && ( // Skeleton for Map if loading main plan
+                  <Skeleton className="h-[400px] w-full rounded-xl shadow-xl" />
                 )}
                 <MapDisplayWrapper
                   destination={formData.destination}
@@ -306,35 +340,31 @@ export default function HomePage() {
 
             {/* Packing List Section */}
             {loadingPackingList && formData && (
-              <Card className="shadow-xl mt-8">
-                <CardHeader><CardTitle>Crafting Your Essential Packing List...</CardTitle></CardHeader>
-                <CardContent className="space-y-4">
-                    <Skeleton className="h-8 w-3/4" />
-                    <Skeleton className="h-6 w-full" />
-                    <Skeleton className="h-20 w-full" />
+              <Card className="shadow-xl mt-8 animate-pulse">
+                <CardHeader><Skeleton className="h-8 w-3/4 rounded-md" /></CardHeader>
+                <CardContent className="space-y-4 pt-4">
+                    <Skeleton className="h-6 w-full rounded-md" />
+                    <Skeleton className="h-20 w-full rounded-lg" />
                 </CardContent>
               </Card>
             )}
             {packingList && !loadingPackingList && formData && (
               <PackingListDisplay packingListItems={packingList} destination={formData.destination} />
             )}
-            {!loading && !loadingPackingList && packingList === null && itinerary && formData && (
-                 <Card className="shadow-xl mt-8">
-                    <CardHeader><CardTitle>Preparing Packing List...</CardTitle></CardHeader>
+            {!loading && !loadingPackingList && packingList === null && itinerary && formData && ( // Placeholder while waiting for packing list data
+                 <Card className="shadow-xl mt-8 bg-muted/50">
+                    <CardHeader><CardTitle className="text-primary/90">Preparing Your Packing List...</CardTitle></CardHeader>
                     <CardContent>
-                        <p className="text-muted-foreground">Waiting for all data to generate your packing list.</p>
+                        <p className="text-muted-foreground">Just a moment, curating essentials for your trip to {formData.destination}.</p>
                     </CardContent>
                 </Card>
             )}
           </div>
         </div>
       </main>
-      <footer className="text-center p-4 text-muted-foreground text-sm border-t border-border mt-8">
-        © {new Date().getFullYear()} WanderWise. Adventure Awaits!
+      <footer className="text-center p-6 text-muted-foreground/80 text-sm border-t border-border/50 mt-12 bg-background/50">
+        © {new Date().getFullYear()} WanderWise by Firebase Studio. Adventure Awaits, Plan Smart!
       </footer>
     </div>
   );
 }
-
-
-    

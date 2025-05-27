@@ -1,3 +1,4 @@
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -15,7 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { DollarSign, MapPin, Sparkles, Loader2 } from "lucide-react";
+import { DollarSign, MapPin, Sparkles, Loader2, Briefcase /* Replaced Sparkles with Briefcase for budget */ } from "lucide-react";
 
 const formSchema = z.object({
   destination: z.string().min(2, {
@@ -47,15 +48,15 @@ export function ItineraryForm({ onSubmit, loading }: ItineraryFormProps) {
   });
 
   return (
-    <Card className="shadow-xl">
-      <CardHeader>
-        <CardTitle className="text-2xl font-bold text-primary flex items-center gap-2">
-          <Sparkles className="h-6 w-6" />
+    <Card className="shadow-2xl bg-card/95 backdrop-blur-sm border-primary/20">
+      <CardHeader className="border-b border-primary/10 pb-4">
+        <CardTitle className="text-2xl font-extrabold text-primary flex items-center gap-2">
+          <Sparkles className="h-7 w-7 text-accent animate-pulse" />
           Plan Your Dream Trip
         </CardTitle>
-        <CardDescription>Tell us about your travel plans, and we'll craft the perfect itinerary!</CardDescription>
+        <CardDescription className="text-muted-foreground pt-1">Tell us about your adventure, and we'll craft the magic!</CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pt-6">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <FormField
@@ -63,11 +64,11 @@ export function ItineraryForm({ onSubmit, loading }: ItineraryFormProps) {
               name="destination"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="flex items-center gap-2 text-base">
-                    <MapPin className="h-5 w-5 text-accent" /> Destination
+                  <FormLabel className="flex items-center gap-2 text-base font-semibold text-foreground/90">
+                    <MapPin className="h-5 w-5 text-primary" /> Destination
                   </FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., Paris, France" {...field} className="text-base"/>
+                    <Input placeholder="e.g., Kyoto, Japan" {...field} className="text-base py-5 bg-background border-border focus:border-primary focus:ring-primary/50 shadow-sm"/>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -78,11 +79,11 @@ export function ItineraryForm({ onSubmit, loading }: ItineraryFormProps) {
               name="budget"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="flex items-center gap-2 text-base">
-                    <DollarSign className="h-5 w-5 text-accent" /> Budget (USD)
+                  <FormLabel className="flex items-center gap-2 text-base font-semibold text-foreground/90">
+                    <DollarSign className="h-5 w-5 text-primary" /> Budget (USD)
                   </FormLabel>
                   <FormControl>
-                    <Input type="number" placeholder="e.g., 1500" {...field} className="text-base"/>
+                    <Input type="number" placeholder="e.g., 2000" {...field} className="text-base py-5 bg-background border-border focus:border-primary focus:ring-primary/50 shadow-sm"/>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -93,25 +94,29 @@ export function ItineraryForm({ onSubmit, loading }: ItineraryFormProps) {
               name="interests"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="flex items-center gap-2 text-base">
-                    <Sparkles className="h-5 w-5 text-accent" /> Interests
+                  <FormLabel className="flex items-center gap-2 text-base font-semibold text-foreground/90">
+                    <Briefcase className="h-5 w-5 text-primary" /> Interests & Activities
                   </FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="e.g., museums, hiking, local cuisine, history"
+                      placeholder="e.g., temples, ramen tasting, bullet train, traditional markets"
                       {...field}
-                      className="text-base min-h-[100px]"
+                      className="text-base min-h-[120px] bg-background border-border focus:border-primary focus:ring-primary/50 shadow-sm"
                     />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            <Button type="submit" disabled={loading} className="w-full text-lg py-6">
+            <Button 
+              type="submit" 
+              disabled={loading} 
+              className="w-full text-lg py-6 font-bold bg-gradient-to-r from-primary to-accent text-primary-foreground hover:opacity-90 transition-opacity duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
+            >
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  Generating...
+                  Crafting Your Plan...
                 </>
               ) : (
                 "Create My Itinerary"
