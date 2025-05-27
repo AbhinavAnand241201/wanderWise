@@ -368,7 +368,7 @@ export default function HomePage() {
         </div>
       </main>
       <footer className="text-center p-6 text-muted-foreground/80 text-sm border-t border-border/50 mt-12 bg-background/50 backdrop-blur-sm">
-        <p>© {new Date().getFullYear()} WanderWise by Firebase Studio. Adventure Awaits, Plan Smart!</p>
+        <p>© {new Date().getFullYear()} WanderWise where Adventure Awaits , Plan Smart!</p>
         <p className="mt-1">Made with love and effort by Abhinav.</p>
         <p className="mt-1">
           <Link href="https://portfolio-latest-steel.vercel.app" target="_blank" rel="noopener noreferrer" className="text-primary hover:text-accent underline transition-colors">
