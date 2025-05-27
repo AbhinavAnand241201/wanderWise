@@ -4,7 +4,6 @@
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { MapIcon } from "lucide-react";
-// Changed import style
 import * as GoogleMaps from "@vis.gl/react-google-maps";
 import { useEffect, useState } from "react";
 
@@ -19,20 +18,37 @@ interface GeocodeResult {
 }
 
 function InnerMapDisplay({ destination, routePolyline }: MapDisplayProps) {
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
   const [position, setPosition] = useState<GeocodeResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const mapInstance = GoogleMaps.useMap(); 
+  
+  const mapInstance = GoogleMaps.useMap();
+  const geocodingLibrary = GoogleMaps.useMapsLibrary('geocoding'); // Use the hook
 
   const [decodedPath, setDecodedPath] = useState<google.maps.LatLngLiteral[] | null>(null);
   const [currentMapPolyline, setCurrentMapPolyline] = useState<google.maps.Polyline | null>(null);
 
   useEffect(() => {
     let isMounted = true;
-    if (destination && apiKey && window.google && window.google.maps && typeof window.google.maps.Geocoder === 'function') { // Added Geocoder check
-      setLoading(true);
-      const geocoder = new window.google.maps.Geocoder();
+
+    if (!destination) {
+      if (isMounted) {
+        setPosition(null);
+        setError(null);
+        setLoading(false);
+        if (currentMapPolyline) { // Clear polyline if destination is removed
+            currentMapPolyline.setMap(null);
+            setCurrentMapPolyline(null);
+        }
+        setDecodedPath(null);
+      }
+      return; // Early exit if no destination
+    }
+
+    setLoading(true); // Start loading when destination is present
+
+    if (geocodingLibrary) {
+      const geocoder = new geocodingLibrary.Geocoder();
       geocoder.geocode({ address: destination }, (results, status) => {
         if (!isMounted) return;
         if (status === 'OK' && results && results[0]) {
@@ -40,45 +56,32 @@ function InnerMapDisplay({ destination, routePolyline }: MapDisplayProps) {
           setPosition({ lat: loc.lat(), lng: loc.lng() });
           setError(null);
         } else {
-          console.error(`Geocoding failed for ${destination}: ${status}`);
-          setError(`Could not find coordinates for ${destination}. Status: ${status}`);
+          console.error(`Geocoding API Error for '${destination}': ${status}`, results);
+          setError(`Geocoding failed for ${destination}. Status: ${status}. Possible API key issue or Geocoding API not enabled in GCP.`);
           setPosition(null);
         }
         setLoading(false);
       });
-    } else if (!destination) {
-        if (isMounted) {
-            setPosition(null);
-            setError(null);
-            setLoading(false);
-        }
-    } else if (!apiKey) {
-        if (isMounted) {
-            setError("Geocoding requires an API key (NEXT_PUBLIC_GOOGLE_MAPS_API_KEY).");
-            setLoading(false);
-            setPosition(null);
-        }
-    } else if (window.google && window.google.maps && typeof window.google.maps.Geocoder !== 'function') {
-        if (isMounted) {
-            // Geocoding library specifically not loaded
-            setError("Google Maps Geocoding library not available. Ensure it's loaded via APIProvider.");
-            console.warn("Geocoder not available, check APIProvider libraries prop.");
-            setLoading(false);
-        }
-    } else { 
-        if (isMounted) {
-            setLoading(false); 
-        }
+    } else {
+      // geocodingLibrary is null from useMapsLibrary hook.
+      // This implies the 'geocoding' library requested by APIProvider (or useMapsLibrary itself) is not available.
+      if (isMounted) {
+        console.warn("`useMapsLibrary('geocoding')` returned null. Ensure 'geocoding' is in APIProvider's libraries prop and the API key has Geocoding API enabled in Google Cloud Console.");
+        setError("Geocoding service setup error. Check API key and ensure Geocoding API is enabled in Google Cloud Console.");
+        setLoading(false); // Show the error
+        setPosition(null);
+      }
     }
-    return () => { isMounted = false; }
-  }, [destination, apiKey]); // mapInstance removed as direct dependency for geocoding
+
+    return () => { isMounted = false; };
+  }, [destination, geocodingLibrary]); // Effect runs when destination or geocodingLibrary availability changes
 
   useEffect(() => {
     if (routePolyline && window.google && window.google.maps && window.google.maps.geometry && window.google.maps.geometry.encoding) {
       try {
         const path = window.google.maps.geometry.encoding.decodePath(routePolyline);
         const literalPath = path.map(p => ({ lat: p.lat(), lng: p.lng() }));
-        setDecodedPath(literalPath); 
+        setDecodedPath(literalPath);
         
         if (mapInstance && path.length > 0) {
           const bounds = new window.google.maps.LatLngBounds();
@@ -91,12 +94,15 @@ function InnerMapDisplay({ destination, routePolyline }: MapDisplayProps) {
       }
     } else if (!routePolyline) {
       setDecodedPath(null);
-      if (mapInstance && position) {
+      if (mapInstance && position) { // If no route, zoom to geocoded position
         mapInstance.setCenter(position);
         mapInstance.setZoom(10);
+      } else if (mapInstance && !position && !error) { // No route, no position, no error -> default view
+        mapInstance.setCenter({ lat: 0, lng: 0 }); // Or some other default
+        mapInstance.setZoom(2);
       }
     }
-  }, [routePolyline, mapInstance, position]);
+  }, [routePolyline, mapInstance, position, error]); // Added error to dependencies
 
   useEffect(() => {
     if (!mapInstance) return;
@@ -104,7 +110,7 @@ function InnerMapDisplay({ destination, routePolyline }: MapDisplayProps) {
     // Clear previous polyline if it exists
     if (currentMapPolyline) {
       currentMapPolyline.setMap(null);
-      setCurrentMapPolyline(null); // Ensure state is updated
+      setCurrentMapPolyline(null); 
     }
 
     if (decodedPath && decodedPath.length > 0 && window.google && window.google.maps) {
@@ -122,6 +128,7 @@ function InnerMapDisplay({ destination, routePolyline }: MapDisplayProps) {
       setCurrentMapPolyline(newPolyline);
     }
     
+    // Cleanup function to remove polyline when component unmounts or dependencies change
     return () => {
       if (currentMapPolyline) { 
         currentMapPolyline.setMap(null);
@@ -134,7 +141,7 @@ function InnerMapDisplay({ destination, routePolyline }: MapDisplayProps) {
     <Card className="shadow-lg">
       <CardHeader>
         <CardTitle className="text-xl font-semibold text-accent flex items-center gap-2">
-          <MapIcon className="h-6 w-6" /> {/* Corrected to use Lucide MapIcon */}
+          <MapIcon className="h-6 w-6" />
           Interactive Map
         </CardTitle>
         <CardDescription>Visualize your destination{destination ? `: ${destination}` : ''}{routePolyline ? ' and route' : ''}</CardDescription>
@@ -143,20 +150,21 @@ function InnerMapDisplay({ destination, routePolyline }: MapDisplayProps) {
         {loading && <p className="text-muted-foreground">Loading map data...</p>}
         {error && <p className="text-destructive mb-2">{error}</p>}
         
-        {(position || decodedPath) && !loading && (
+        {(!loading && (position || decodedPath)) && ( // Render map if not loading AND we have a position or a path to show
           <div className="h-[400px] w-full rounded-md overflow-hidden border">
             <GoogleMaps.Map 
-              center={position || undefined} 
-              zoom={position && !decodedPath ? 10 : (decodedPath ? 5 : 10) } // Adjusted zoom logic
+              center={position || (decodedPath && decodedPath.length > 0 ? decodedPath[0] : undefined) || {lat: 0, lng: 0}} 
+              zoom={position && !decodedPath ? 10 : (decodedPath ? 5 : 2) }
               mapId="wanderwise-map"
               gestureHandling={'greedy'}
               disableDefaultUI={true}
             >
-              {position && <GoogleMaps.AdvancedMarker position={position} title={destination} />} 
+              {position && <GoogleMaps.AdvancedMarker position={position} title={destination} />}
+              {/* Polyline is now drawn manually using useEffect */}
             </GoogleMaps.Map>
           </div>
         )}
-         {!loading && !position && !decodedPath && !error && (
+         {!loading && !position && !decodedPath && !error && ( // No data, not loading, no error
             <div className="h-[400px] w-full bg-muted flex items-center justify-center rounded-md border">
                 <p className="text-muted-foreground p-4 text-center">Map will appear here once a destination is provided.</p>
             </div>
@@ -190,9 +198,9 @@ export function MapDisplayWrapper(props: MapDisplayProps) {
         );
     }
     
-    // Updated to include 'geocoding'
+    // 'geocoding' is included here to tell APIProvider to load it.
+    // 'geometry' is needed for decoding polylines.
     const libraries: ("geometry" | "places" | "marker" | "geocoding" | "routes" | "visualization" | "drawing" | "localContext")[] = ['geometry', 'geocoding'];
-
 
     return (
         <GoogleMaps.APIProvider apiKey={apiKey} libraries={libraries}> 
@@ -200,4 +208,3 @@ export function MapDisplayWrapper(props: MapDisplayProps) {
         </GoogleMaps.APIProvider>
     );
 }
-
