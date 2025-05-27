@@ -50,8 +50,8 @@ export interface AirQualityData {
 }
 
 export interface WeatherAndAirQualityOutput {
-  forecasts: DailyForecast[] | null; // Allow null
-  airQuality?: AirQualityData | null; // Allow null
+  forecasts: DailyForecast[] | null;
+  airQuality?: AirQualityData | null;
 }
 
 export async function getWeatherForecast(lat: number, lng: number, days: number = 7): Promise<DailyForecast[] | null> {
@@ -62,7 +62,7 @@ export async function getWeatherForecast(lat: number, lng: number, days: number 
     const response = await fetch(url);
     const responseText = await response.text(); 
     console.log(`Google Forecast API response for lat: ${lat}, lng: ${lng}, days: ${days} - Status: ${response.status}`);
-    console.log("Forecast API Raw Response Body:", responseText);
+    // console.log("Forecast API Raw Response Body:", responseText); // Potentially very verbose
 
     if (!response.ok) {
       let errorData;
@@ -72,12 +72,11 @@ export async function getWeatherForecast(lat: number, lng: number, days: number 
         errorData = { error: { message: `Failed to parse error response: ${responseText}` }};
       }
       console.error('Google Forecast API Error:', response.status, errorData);
-      // Do not throw here, allow the flow to return partial data or an error message
       return null;
     }
     
     const data = JSON.parse(responseText);
-    console.log("Parsed Forecast API Data:", JSON.stringify(data, null, 2));
+    // console.log("Parsed Forecast API Data:", JSON.stringify(data, null, 2)); // Potentially very verbose
     
     if (data.dailyForecasts && Array.isArray(data.dailyForecasts)) {
       return data.dailyForecasts.map((df: any) => ({
@@ -92,7 +91,6 @@ export async function getWeatherForecast(lat: number, lng: number, days: number 
     return null;
   } catch (error) {
     console.error('Error fetching or processing weather forecast data:', error);
-    // Do not throw here, allow the flow to return partial data or an error message
     return null;
   }
 }
@@ -111,7 +109,7 @@ export async function getCurrentAirQuality(lat: number, lng: number): Promise<Ai
     });
     const responseText = await response.text();
     console.log(`Google Air Quality API response for lat: ${lat}, lng: ${lng} - Status: ${response.status}`);
-    console.log("Air Quality API Raw Response Body:", responseText);
+    // console.log("Air Quality API Raw Response Body:", responseText); // Potentially verbose
 
     if (!response.ok) {
       let errorData;
@@ -121,11 +119,10 @@ export async function getCurrentAirQuality(lat: number, lng: number): Promise<Ai
         errorData = { error: { message: `Failed to parse error response: ${responseText}`}};
       }
       console.error('Google Air Quality API Error:', response.status, errorData);
-      // Do not throw here, allow the flow to return partial data or an error message
       return null;
     }
     const data = JSON.parse(responseText);
-    console.log("Parsed Air Quality API Data:", JSON.stringify(data, null, 2));
+    // console.log("Parsed Air Quality API Data:", JSON.stringify(data, null, 2)); // Potentially verbose
 
     if (data.indexes && data.indexes.length > 0) {
       const primaryIndex = data.indexes.find((idx: any) => idx.code === 'uaqi') || data.indexes[0];
@@ -141,7 +138,6 @@ export async function getCurrentAirQuality(lat: number, lng: number): Promise<Ai
     return null;
   } catch (error) {
     console.error('Error fetching or processing air quality data:', error);
-     // Do not throw here, allow the flow to return partial data or an error message
     return null;
   }
 }
@@ -155,15 +151,15 @@ export async function findPlacePhotoByTextSearch(query: string, lat?: number, ln
   
   let url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&key=${API_KEY}`;
   if (lat && lng) {
-    url += `&location=${lat}%2C${lng}&radius=50000`; // Add location bias if lat/lng provided
+    url += `&location=${lat}%2C${lng}&radius=50000`; 
   }
   
-  console.log("Google Places Text Search URL:", url);
+  // console.log("Google Places Text Search URL:", url); // Potentially verbose
 
   try {
     const response = await fetch(url);
     const data = await response.json();
-    console.log("Places Text Search API response for query:", query, JSON.stringify(data, null, 2));
+    // console.log("Places Text Search API response for query:", query, JSON.stringify(data, null, 2)); // Potentially verbose
 
     if (data.status === 'OK' && data.results && data.results.length > 0) {
       const place = data.results[0];
@@ -175,6 +171,53 @@ export async function findPlacePhotoByTextSearch(query: string, lat?: number, ln
     return { photoReference: null };
   } catch (error) {
     console.error('Error fetching place photo data:', error);
-    return null; // Return null or an object indicating error, rather than throwing
+    return null;
+  }
+}
+
+export interface DirectionsResult {
+  summary: string; // e.g., "15 mins (7.5 km)"
+  distance: string;
+  duration: string;
+  overviewPolyline: string | null; // Encoded polyline string
+}
+
+export async function getDirections(
+  originLat: number,
+  originLng: number,
+  destinationLat: number,
+  destinationLng: number
+): Promise<DirectionsResult | null> {
+  if (!API_KEY) throw new Error('GOOGLE_API_KEY is not configured.');
+
+  const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${originLat},${originLng}&destination=${destinationLat},${destinationLng}&key=${API_KEY}`;
+  console.log("Google Directions API URL:", url);
+
+  try {
+    const response = await fetch(url);
+    const data = await response.json();
+    console.log("Directions API Response:", JSON.stringify(data, null, 2));
+
+    if (data.status === 'OK' && data.routes && data.routes.length > 0) {
+      const route = data.routes[0];
+      if (route.legs && route.legs.length > 0) {
+        const leg = route.legs[0];
+        const distance = leg.distance?.text || 'N/A';
+        const duration = leg.duration?.text || 'N/A';
+        const overviewPolyline = route.overview_polyline?.points || null;
+
+        return {
+          summary: `${duration} (${distance})`,
+          distance,
+          duration,
+          overviewPolyline,
+        };
+      }
+    }
+    console.error('Directions API Error or no routes found:', data.status, data.error_message);
+    return null;
+  } catch (error) {
+    console.error('Error fetching directions data:', error);
+    return null;
   }
 }

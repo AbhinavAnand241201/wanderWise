@@ -22,6 +22,7 @@ export default function HomePage() {
   const [formData, setFormData] = useState<ItineraryFormValues | null>(null);
   const [itinerary, setItinerary] = useState<DayItinerary[] | null>(null); 
   const [suggestions, setSuggestions] = useState<SuggestPlacesOutput | null>(null);
+  const [currentRoutePolyline, setCurrentRoutePolyline] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
@@ -31,6 +32,7 @@ export default function HomePage() {
     setError(null);
     setItinerary(null);
     setSuggestions(null);
+    setCurrentRoutePolyline(null); // Clear previous route
     setFormData(values);
 
     try {
@@ -40,20 +42,18 @@ export default function HomePage() {
         interests: values.interests,
       });
 
-      const budgetString = `$${values.budget}`; // The suggestPlaces flow expects budget as a string
+      const budgetString = `$${values.budget}`; 
       const suggestionsPromise = suggestPlaces({
         destination: values.destination,
         budget: budgetString,
         interests: values.interests,
       });
 
-      // Execute in parallel
       const [itineraryResult, suggestionsResult] = await Promise.all([
         itineraryPromise,
         suggestionsPromise,
       ]);
       
-      // Process Itinerary
       if (itineraryResult.itinerary && itineraryResult.itinerary.length > 0) {
         setItinerary(itineraryResult.itinerary);
       } else {
@@ -66,15 +66,13 @@ export default function HomePage() {
         });
       }
       
-      // Process Suggestions
       if (suggestionsResult) {
         setSuggestions(suggestionsResult);
       } else {
         console.warn("Suggestions were not generated or are invalid:", suggestionsResult);
-        setSuggestions({ hotels: [], restaurants: [], activities: []}); // Ensure it's always an object
+        setSuggestions({ hotels: [], restaurants: [], activities: []});
       }
       
-
       toast({
         title: "Plan Generated!",
         description: "Your personalized trip plan is ready.",
@@ -134,13 +132,11 @@ export default function HomePage() {
       let position = 0;
       let currentImgHeight = newImgHeight;
       
-      // Add first page
       pdf.addImage(imgData, 'PNG', (pdfWidth - newImgWidth) / 2, 0, newImgWidth, newImgHeight);
       currentImgHeight -= pdfHeight;
 
-      // Add subsequent pages if needed
       while (currentImgHeight > 0) {
-        position -= pdfHeight; // This should be negative to move the image "up" on the new page
+        position -= pdfHeight; 
         pdf.addPage();
         pdf.addImage(imgData, 'PNG', (pdfWidth - newImgWidth) / 2, position, newImgWidth, newImgHeight);
         currentImgHeight -= pdfHeight;
@@ -154,12 +150,15 @@ export default function HomePage() {
     }
   };
 
+  const handleRouteFetched = (polyline: string | null) => {
+    setCurrentRoutePolyline(polyline);
+  };
+
   return (
     <div className="flex flex-col min-h-screen bg-background font-sans">
       <AppHeader />
       <main className="flex-grow container mx-auto p-4 md:p-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-          {/* Column 1: Form & Suggestions */}
           <div className="lg:col-span-1 space-y-8">
             <ItineraryForm onSubmit={handleGeneratePlan} loading={loading} />
             {loading && !suggestions && (
@@ -172,11 +171,9 @@ export default function HomePage() {
                 </CardContent>
               </Card>
             )}
-            {/* Ensure suggestions is not null before rendering */}
             {suggestions && !loading && <SuggestionsDisplay suggestions={suggestions} />}
           </div>
 
-          {/* Column 2: Itinerary, Map, Weather */}
           <div className="lg:col-span-2 space-y-8">
             {error && (
               <Alert variant="destructive" className="shadow-md">
@@ -202,7 +199,8 @@ export default function HomePage() {
               <ItineraryDisplay 
                 itinerary={itinerary} 
                 destination={formData.destination} 
-                onExportPDF={handleExportPDF} 
+                onExportPDF={handleExportPDF}
+                onRouteFetched={handleRouteFetched} 
               />
             )}
             
@@ -223,14 +221,13 @@ export default function HomePage() {
                 {(loading && (!itinerary || itinerary.length === 0)) && ( 
                   <>
                     <Skeleton className="h-[300px] w-full shadow-xl" />
-                    <Skeleton className="h-[200px] w-full shadow-xl" /> {/* Adjusted skeleton height for weather */}
+                    <Skeleton className="h-[200px] w-full shadow-xl" />
                   </>
                 )}
-                {/* Render MapDisplay and WeatherDisplay if formData exists, regardless of itinerary content,
-                    as they depend on formData.destination primarily.
-                    Show skeletons if loading and data isn't there yet.
-                */}
-                <MapDisplay destination={formData.destination} />
+                <MapDisplay 
+                  destination={formData.destination} 
+                  routePolyline={currentRoutePolyline} 
+                />
                 <WeatherDisplay location={formData.destination} />
               </>
             )}

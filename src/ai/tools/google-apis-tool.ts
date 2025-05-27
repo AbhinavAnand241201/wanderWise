@@ -2,7 +2,7 @@
 // src/ai/tools/google-apis-tool.ts
 'use server';
 /**
- * @fileOverview Genkit tools for interacting with Google APIs (Geocoding, Weather, Air Quality, Places).
+ * @fileOverview Genkit tools for interacting with Google APIs (Geocoding, Weather, Air Quality, Places, Directions).
  */
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
@@ -10,11 +10,13 @@ import {
   geocodeAddress as geocodeAddressService, 
   getWeatherForecast as getWeatherForecastService,
   getCurrentAirQuality as getCurrentAirQualityService,
-  findPlacePhotoByTextSearch as findPlacePhotoByTextSearchService, // New service import
+  findPlacePhotoByTextSearch as findPlacePhotoByTextSearchService,
+  getDirections as getDirectionsService, // New service import
   type GeocodeLocation,
   type DailyForecast,
   type AirQualityData,
-  type PlacePhotoReference
+  type PlacePhotoReference,
+  type DirectionsResult
 } from '@/services/google-apis';
 
 // Geocoding Tool
@@ -105,13 +107,13 @@ export const getAirQualityTool = ai.defineTool(
   }
 );
 
-// Find Place Photo Tool (New Tool)
+// Find Place Photo Tool
 const FindPlacePhotoInputSchema = z.object({
   placeName: z.string().describe('The name of the place to find a photo for (e.g., "Louvre Museum", "Joe\'s Pizza Shack").'),
   destinationContext: z.string().describe('The broader destination context to help disambiguate the place name (e.g., "Paris, France", "New York City").'),
 });
 const FindPlacePhotoOutputSchema = z.object({
-  photoReference: z.string().nullable(), // photo_reference can be null if no photo found
+  photoReference: z.string().nullable(), 
 }).describe("A photo reference string from Google Places API, or null if not found.");
 
 
@@ -124,7 +126,6 @@ export const findPlacePhotoTool = ai.defineTool(
   },
   async (input) => {
     try {
-      // First, try to geocode the destination context to get lat/lng for better search results
       const geocodedContext = await geocodeAddressService(input.destinationContext);
       const query = `${input.placeName} in ${input.destinationContext}`;
       
@@ -132,7 +133,39 @@ export const findPlacePhotoTool = ai.defineTool(
       return result ? { photoReference: result.photoReference } : { photoReference: null };
     } catch (error) {
       console.error("Error in findPlacePhotoTool:", error);
-      return { photoReference: null }; // Ensure a valid output schema structure on error
+      return { photoReference: null }; 
+    }
+  }
+);
+
+// Get Directions Tool (New Tool)
+const GetDirectionsInputSchema = z.object({
+  originLat: z.number().describe("Latitude of the origin."),
+  originLng: z.number().describe("Longitude of the origin."),
+  destinationLat: z.number().describe("Latitude of the destination."),
+  destinationLng: z.number().describe("Longitude of the destination."),
+});
+
+const GetDirectionsOutputSchema = z.object({
+  summary: z.string().describe("Textual summary of the directions (e.g., '15 mins (7.5 km)')."),
+  distance: z.string().describe("Total distance of the route."),
+  duration: z.string().describe("Total duration of the route."),
+  overviewPolyline: z.string().nullable().describe("Encoded polyline string for the route overview."),
+}).nullable();
+
+export const getDirectionsTool = ai.defineTool(
+  {
+    name: 'getDirections',
+    description: 'Fetches directions, including distance, duration, and route polyline, between two geographic coordinates.',
+    inputSchema: GetDirectionsInputSchema,
+    outputSchema: GetDirectionsOutputSchema,
+  },
+  async (input) => {
+    try {
+      return await getDirectionsService(input.originLat, input.originLng, input.destinationLat, input.destinationLng);
+    } catch (error) {
+      console.error("Error in getDirectionsTool:", error);
+      return null;
     }
   }
 );

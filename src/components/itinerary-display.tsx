@@ -4,31 +4,104 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { CalendarDays, FileDown, Clock, DollarSignIcon, ListChecks, Tag, StickyNote, Briefcase, MapPin } from "lucide-react";
-import React, { useRef } from 'react';
-import type { DayItinerary, Activity } from "@/ai/flows/generate-itinerary"; // Import structured types
+import { CalendarDays, FileDown, Clock, DollarSignIcon, ListChecks, Tag, StickyNote, Briefcase, MapPin, Route, Loader2, AlertTriangle } from "lucide-react";
+import React, { useRef, useState } from 'react';
+import type { DayItinerary, Activity } from "@/ai/flows/generate-itinerary";
+import { fetchAndSummarizeDirections } from "@/app/actions/directionsActions";
 
 interface ItineraryDisplayProps {
-  itinerary: DayItinerary[]; // Expecting an array of structured DayItinerary objects
+  itinerary: DayItinerary[];
   destination: string;
   onExportPDF: (element: HTMLElement | null) => void;
+  onRouteFetched: (polyline: string | null) => void; // Callback to pass polyline to HomePage
 }
 
-export function ItineraryDisplay({ itinerary, destination, onExportPDF }: ItineraryDisplayProps) {
+export function ItineraryDisplay({ itinerary, destination, onExportPDF, onRouteFetched }: ItineraryDisplayProps) {
   const itineraryContentRef = useRef<HTMLDivElement>(null);
+  const [directionsLoading, setDirectionsLoading] = useState<Record<string, boolean>>({}); // activityIndex-activityIndex+1 -> boolean
+  const [directionsData, setDirectionsData] = useState<Record<string, { summary: string | null; error?: string }>>({});
 
-  const renderActivity = (activity: Activity, activityIndex: number) => (
-    <div key={activityIndex} className="mb-3 p-3 border-l-2 border-accent/50 bg-background rounded-r-md shadow-sm">
-      {activity.time && <p className="text-sm font-semibold text-primary flex items-center gap-1"><Clock size={14} /> {activity.time}</p>}
-      <p className="my-1">{activity.description}</p>
-      <div className="text-xs text-muted-foreground space-y-0.5">
-        {activity.duration && <p><Briefcase size={12} className="inline mr-1" /> Duration: {activity.duration}</p>}
-        {activity.cost && <p><DollarSignIcon size={12} className="inline mr-1 text-green-600" /> Cost: {activity.cost}</p>}
-        {activity.notes && <p><StickyNote size={12} className="inline mr-1" /> Notes: {activity.notes}</p>}
+  const handleGetDirections = async (originActivity: Activity, destinationActivity: Activity, key: string) => {
+    if (!originActivity.address || !destinationActivity.address) {
+      setDirectionsData(prev => ({ ...prev, [key]: { summary: null, error: "Origin or destination address missing." }}));
+      return;
+    }
+
+    setDirectionsLoading(prev => ({ ...prev, [key]: true }));
+    setDirectionsData(prev => ({ ...prev, [key]: { summary: null, error: undefined }})); // Clear previous
+    onRouteFetched(null); // Clear previous route on map
+
+    try {
+      const result = await fetchAndSummarizeDirections({
+        originAddress: originActivity.address,
+        destinationAddress: destinationActivity.address,
+      });
+
+      setDirectionsData(prev => ({ ...prev, [key]: { summary: result.summary, error: result.error }}));
+      if (result.overviewPolyline && !result.error) {
+        onRouteFetched(result.overviewPolyline);
+      } else {
+        onRouteFetched(null);
+      }
+    } catch (error) {
+      console.error("Failed to fetch directions:", error);
+      const message = error instanceof Error ? error.message : "Unknown error fetching directions.";
+      setDirectionsData(prev => ({ ...prev, [key]: { summary: null, error: message }}));
+      onRouteFetched(null);
+    } finally {
+      setDirectionsLoading(prev => ({ ...prev, [key]: false }));
+    }
+  };
+
+  const renderActivity = (activity: Activity, activityIndex: number, dayActivities: Activity[], dayIndex: number) => {
+    const nextActivity = dayActivities[activityIndex + 1];
+    const directionsKey = `d${dayIndex}-a${activityIndex}-a${activityIndex+1}`;
+    const currentDirections = directionsData[directionsKey];
+    const isLoadingDirections = directionsLoading[directionsKey];
+
+    return (
+      <div key={activityIndex} className="mb-3 p-3 border-l-2 border-accent/50 bg-background rounded-r-md shadow-sm">
+        <div className="flex justify-between items-start">
+          <div>
+            {activity.time && <p className="text-sm font-semibold text-primary flex items-center gap-1"><Clock size={14} /> {activity.time}</p>}
+            <p className="my-1 font-medium">{activity.description}</p>
+          </div>
+          {activity.address && <p className="text-xs text-muted-foreground flex items-center gap-1"><MapPin size={12}/> {activity.address}</p>}
+        </div>
+        <div className="text-xs text-muted-foreground space-y-0.5 mt-1">
+          {activity.duration && <p><Briefcase size={12} className="inline mr-1" /> Duration: {activity.duration}</p>}
+          {activity.cost && <p><DollarSignIcon size={12} className="inline mr-1 text-green-600" /> Cost: {activity.cost}</p>}
+          {activity.notes && <p><StickyNote size={12} className="inline mr-1" /> Notes: {activity.notes}</p>}
+        </div>
+        
+        {activity.address && nextActivity && nextActivity.address && (
+          <div className="mt-3 pt-2 border-t border-dashed">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleGetDirections(activity, nextActivity, directionsKey)}
+              disabled={isLoadingDirections}
+              className="text-xs"
+            >
+              {isLoadingDirections ? (
+                <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+              ) : (
+                <Route className="mr-2 h-3 w-3" />
+              )}
+              Directions to {nextActivity.description.length > 20 ? nextActivity.description.substring(0,17) + '...' : nextActivity.description}
+            </Button>
+            {currentDirections && (
+              <div className="mt-2 text-xs p-2 rounded-md bg-muted/70">
+                {currentDirections.summary && <p>{currentDirections.summary}</p>}
+                {currentDirections.error && <p className="text-destructive flex items-center gap-1"><AlertTriangle size={14}/> {currentDirections.error}</p>}
+              </div>
+            )}
+          </div>
+        )}
       </div>
-    </div>
-  );
-
+    );
+  };
+  
   const renderDay = (dayData: DayItinerary, dayIndex: number) => {
     const dayTitle = typeof dayData.day === 'number' ? `Day ${dayData.day}` : dayData.day;
     
@@ -46,7 +119,7 @@ export function ItineraryDisplay({ itinerary, destination, onExportPDF }: Itiner
             {dayData.activities && dayData.activities.length > 0 && (
               <div>
                 <h4 className="text-md font-semibold mb-2 text-primary/80 flex items-center gap-1"><ListChecks size={18}/> Activities:</h4>
-                {dayData.activities.map(renderActivity)}
+                {dayData.activities.map((activity, idx) => renderActivity(activity, idx, dayData.activities, dayIndex))}
               </div>
             )}
 
