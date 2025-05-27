@@ -165,7 +165,7 @@ export default function HomePage() {
       generateAndSetPackingList();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [itinerary, formData, weatherDataForPacking, loading]); // Removed packingList from deps to avoid re-triggering
+  }, [itinerary, formData, weatherDataForPacking, loading]);
 
 
   const handleExportPDF = async (element: HTMLElement | null) => {
@@ -177,25 +177,20 @@ export default function HomePage() {
     toast({ title: "Generating PDF...", description: "Please wait, this can take a moment." });
 
     try {
-      // Temporarily make all accordion items open for PDF export
       const accordions = element.querySelectorAll('div[data-state="closed"]');
       accordions.forEach(acc => (acc as HTMLElement).setAttribute('data-state', 'open'));
-
-      // Allow a brief moment for layout reflow after opening accordions
       await new Promise(resolve => setTimeout(resolve, 300));
 
-
       const canvas = await html2canvas(element, {
-        scale: 1.5, // Slightly reduced scale for potentially better performance on large content
+        scale: 1.5, 
         useCORS: true,
         logging: true,
         scrollX: 0,
-        scrollY: -window.scrollY, // Capture from the top of the element
+        scrollY: -window.scrollY, 
         windowWidth: element.scrollWidth,
         windowHeight: element.scrollHeight,
       });
 
-       // Restore accordion states
       accordions.forEach(acc => (acc as HTMLElement).setAttribute('data-state', 'closed'));
 
       const imgData = canvas.toDataURL('image/png');
@@ -217,29 +212,25 @@ export default function HomePage() {
       const effectiveImgWidth = imgWidth * ratio;
       const effectiveImgHeight = imgHeight * ratio;
       
-      // Calculate number of pages
       const totalPages = Math.ceil(imgHeight / (pdfHeight/ratio) );
-
 
       for (let i = 0; i < totalPages; i++) {
         if (i > 0) pdf.addPage();
-        // Calculate the y position of the image slice for the current page
         const sourceY = i * (pdfHeight/ratio);
         pdf.addImage(
             imgData, 
             'PNG', 
-            (pdfWidth - effectiveImgWidth) / 2, // Center image
-            0, // Start image at top of page
+            (pdfWidth - effectiveImgWidth) / 2, 
+            0, 
             effectiveImgWidth, 
             effectiveImgHeight,
-            undefined, // alias
-            'FAST', // compression
-            0, // rotation
-            0, // xOffset
-            -sourceY // yOffset on source image (negative to move upwards)
+            undefined, 
+            'FAST', 
+            0, 
+            0, 
+            -sourceY 
         );
       }
-
 
       pdf.save(`WanderWise_Itinerary_${formData?.destination.replace(/[^a-zA-Z0-9]/g, '_') || 'Trip'}.pdf`);
       toast({ title: "PDF Exported!", description: "Your itinerary has been saved." });
@@ -259,11 +250,10 @@ export default function HomePage() {
       <main className="flex-grow container mx-auto p-4 md:p-6 lg:p-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 items-start">
           
-          {/* Left Column: Form & Suggestions */}
-          <div className="lg:col-span-1 space-y-6 md:space-y-8 lg:sticky lg:top-24"> {/* Made sticky for better UX */}
+          <div className="lg:col-span-1 space-y-6 md:space-y-8 lg:sticky lg:top-24">
             <ItineraryForm onSubmit={handleGeneratePlan} loading={loading} />
             
-            {loading && !suggestions && ( // Skeleton for Suggestions
+            {loading && !suggestions && ( 
               <Card className="shadow-xl animate-pulse">
                 <CardHeader><Skeleton className="h-8 w-3/4 rounded-md" /></CardHeader>
                 <CardContent className="space-y-4 pt-4">
@@ -276,7 +266,6 @@ export default function HomePage() {
             {suggestions && !loading && <SuggestionsDisplay suggestions={suggestions} />}
           </div>
 
-          {/* Right Column: Itinerary, Map, Weather, Packing List */}
           <div className="lg:col-span-2 space-y-6 md:space-y-8">
             {error && (
               <Alert variant="destructive" className="shadow-xl border-destructive/70 bg-destructive/10">
@@ -286,7 +275,7 @@ export default function HomePage() {
               </Alert>
             )}
 
-            {loading && !itinerary && ( // Skeleton for Itinerary
+            {loading && !itinerary && ( 
               <Card className="shadow-xl animate-pulse">
                 <CardHeader><Skeleton className="h-8 w-1/2 rounded-md" /></CardHeader>
                 <CardContent className="space-y-3 pt-4">
@@ -321,10 +310,9 @@ export default function HomePage() {
                 </Card>
             )}
 
-            {/* Map and Weather - shown once form is submitted or if loading */}
             {formData && (itinerary || loading) && (
               <>
-                {(loading && (!itinerary || itinerary.length === 0)) && ( // Skeleton for Map if loading main plan
+                {(loading && (!itinerary || itinerary.length === 0)) && (
                   <Skeleton className="h-[400px] w-full rounded-xl shadow-xl" />
                 )}
                 <MapDisplayWrapper
@@ -338,7 +326,6 @@ export default function HomePage() {
               </>
             )}
 
-            {/* Packing List Section */}
             {loadingPackingList && formData && (
               <Card className="shadow-xl mt-8 animate-pulse">
                 <CardHeader><Skeleton className="h-8 w-3/4 rounded-md" /></CardHeader>
@@ -351,7 +338,7 @@ export default function HomePage() {
             {packingList && !loadingPackingList && formData && (
               <PackingListDisplay packingListItems={packingList} destination={formData.destination} />
             )}
-            {!loading && !loadingPackingList && packingList === null && itinerary && formData && ( // Placeholder while waiting for packing list data
+            {!loading && !loadingPackingList && packingList === null && itinerary && formData && (
                  <Card className="shadow-xl mt-8 bg-muted/50">
                     <CardHeader><CardTitle className="text-primary/90">Preparing Your Packing List...</CardTitle></CardHeader>
                     <CardContent>
@@ -363,7 +350,8 @@ export default function HomePage() {
         </div>
       </main>
       <footer className="text-center p-6 text-muted-foreground/80 text-sm border-t border-border/50 mt-12 bg-background/50">
-        © {new Date().getFullYear()} WanderWise by Firebase Studio. Adventure Awaits, Plan Smart!
+        <p>© {new Date().getFullYear()} WanderWise by Firebase Studio. Adventure Awaits, Plan Smart!</p>
+        <p className="mt-1">Made with love and effort by Abhinav.</p>
       </footer>
     </div>
   );
