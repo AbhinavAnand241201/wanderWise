@@ -18,7 +18,7 @@ interface ItineraryDisplayProps {
 
 export function ItineraryDisplay({ itinerary, destination, onExportPDF, onRouteFetched }: ItineraryDisplayProps) {
   const itineraryContentRef = useRef<HTMLDivElement>(null);
-  const [directionsLoading, setDirectionsLoading] = useState<Record<string, boolean>>({}); // activityIndex-activityIndex+1 -> boolean
+  const [directionsLoading, setDirectionsLoading] = useState<Record<string, boolean>>({});
   const [directionsData, setDirectionsData] = useState<Record<string, { summary: string | null; error?: string }>>({});
 
   const handleGetDirections = async (originActivity: Activity, destinationActivity: Activity, key: string) => {
@@ -28,8 +28,8 @@ export function ItineraryDisplay({ itinerary, destination, onExportPDF, onRouteF
     }
 
     setDirectionsLoading(prev => ({ ...prev, [key]: true }));
-    setDirectionsData(prev => ({ ...prev, [key]: { summary: null, error: undefined }})); // Clear previous
-    onRouteFetched(null); // Clear previous route on map
+    setDirectionsData(prev => ({ ...prev, [key]: { summary: null, error: undefined }}));
+    onRouteFetched(null); 
 
     try {
       const result = await fetchAndSummarizeDirections({
@@ -58,14 +58,21 @@ export function ItineraryDisplay({ itinerary, destination, onExportPDF, onRouteF
     const directionsKey = `d${dayIndex}-a${activityIndex}-a${activityIndex+1}`;
     const currentDirections = directionsData[directionsKey];
     const isLoadingDirections = directionsLoading[directionsKey];
-    const nextActivityName = nextActivity?.description.length > 20 ? nextActivity.description.substring(0,17) + '...' : nextActivity?.description;
+
+    // Robust handling for activity names
+    const currentActivityName = activity.description 
+        ? (activity.description.length > 25 ? activity.description.substring(0,22) + '...' : activity.description) 
+        : "Current Activity";
+    const nextActivityNameDisplay = nextActivity?.description 
+        ? (nextActivity.description.length > 20 ? nextActivity.description.substring(0,17) + '...' : nextActivity.description) 
+        : "Next Stop";
 
     return (
       <div key={activityIndex} className="mb-3 p-3 border-l-2 border-accent/50 bg-background rounded-r-md shadow-sm">
         <div className="flex justify-between items-start">
           <div>
             {activity.time && <p className="text-sm font-semibold text-primary flex items-center gap-1"><Clock size={14} /> {activity.time}</p>}
-            <p className="my-1 font-medium">{activity.description}</p>
+            <p className="my-1 font-medium">{activity.description || "Activity Description Missing"}</p>
           </div>
           {activity.address && <p className="text-xs text-muted-foreground flex items-center gap-1"><MapPin size={12}/> {activity.address}</p>}
         </div>
@@ -78,7 +85,7 @@ export function ItineraryDisplay({ itinerary, destination, onExportPDF, onRouteF
         {activity.address && nextActivity && nextActivity.address && (
           <div className="mt-3 pt-2 border-t border-dashed">
              <p className="text-xs text-muted-foreground mb-1">
-              Travel from {activity.description.length > 15 ? activity.description.substring(0,12) + '...' : activity.description} to {nextActivityName}:
+              Travel from <strong>{currentActivityName}</strong> to <strong>{nextActivityNameDisplay}</strong>:
             </p>
             <Button
               variant="outline"
@@ -92,13 +99,13 @@ export function ItineraryDisplay({ itinerary, destination, onExportPDF, onRouteF
               ) : (
                 <Route className="mr-2 h-3 w-3" />
               )}
-              Show Route to {nextActivityName}
+              Show Route to {nextActivityNameDisplay}
             </Button>
             {currentDirections && (
               <div className="mt-2 text-xs p-2 rounded-md bg-muted/70">
                 {currentDirections.summary && <p className="font-medium">Route Summary: {currentDirections.summary}</p>}
                 {currentDirections.error && <p className="text-destructive flex items-center gap-1"><AlertTriangle size={14}/> {currentDirections.error}</p>}
-                {currentDirections.summary && !currentDirections.error && <p className="text-primary/80 mt-1">Check the map for the visual route!</p>}
+                {currentDirections.summary && !currentDirections.error && <p className="text-primary/80 mt-1 font-semibold">Check the map for the visual route!</p>}
               </div>
             )}
           </div>
@@ -121,11 +128,13 @@ export function ItineraryDisplay({ itinerary, destination, onExportPDF, onRouteF
               <p className="italic text-muted-foreground mb-3 border-b pb-2">{dayData.summary}</p>
             )}
             
-            {dayData.activities && dayData.activities.length > 0 && (
+            {dayData.activities && dayData.activities.length > 0 ? (
               <div>
                 <h4 className="text-md font-semibold mb-2 text-primary/80 flex items-center gap-1"><ListChecks size={18}/> Activities:</h4>
                 {dayData.activities.map((activity, idx) => renderActivity(activity, idx, dayData.activities, dayIndex))}
               </div>
+            ) : (
+              <p className="text-muted-foreground py-2">No activities listed for this day.</p>
             )}
 
             {dayData.estimatedDayCost && (
@@ -164,7 +173,7 @@ export function ItineraryDisplay({ itinerary, destination, onExportPDF, onRouteF
             {itinerary.map(renderDay)}
           </Accordion>
         ) : (
-          <p className="text-muted-foreground py-4 text-center">Your detailed itinerary will appear here once generated. If you've already generated a plan and see this, the AI might not have been able to create a detailed schedule for your request.</p>
+          <p className="text-muted-foreground py-4 text-center">Your detailed itinerary will appear here once generated. If you've already generated a plan and see this, the AI might not have been able to create a detailed schedule for your request, or there were no activities with addresses to show directions for.</p>
         )}
       </CardContent>
     </Card>
