@@ -14,12 +14,13 @@ import { generatePackingList, type PackingListItem } from "@/ai/flows/generate-p
 import { PackingListDisplay } from "@/components/packing-list-display";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Terminal, Info } from "lucide-react";
+import { Terminal, Info, CalendarDays } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { Skeleton } from "@/components/ui/skeleton";
 import type { GetWeatherAndAirQualityOutput } from "@/ai/flows/get-weather-and-air-quality";
+import Link from "next/link";
 
 export default function HomePage() {
   const [formData, setFormData] = useState<ItineraryFormValues | null>(null);
@@ -44,7 +45,7 @@ export default function HomePage() {
     setSuggestions(null);
     setCurrentRoutePolyline(null);
     setPackingList(null);
-    setWeatherDataForPacking(null); // Reset this too
+    setWeatherDataForPacking(null); 
     setFormData(values);
 
     try {
@@ -60,7 +61,7 @@ export default function HomePage() {
         interests: values.interests,
       });
 
-      const budgetString = `$${values.budget}`; // Ensure budget is passed as string for suggestions
+      const budgetString = `$${values.budget}`; 
       const suggestionsPromise = suggestPlaces({
         destination: values.destination,
         budget: budgetString,
@@ -79,7 +80,7 @@ export default function HomePage() {
         setItinerary([]); 
         toast({
           title: "Itinerary Note",
-          description: "The AI couldn't create a detailed schedule with the provided inputs. Try being more specific or general with your interests!",
+          description: "The AI couldn't create a detailed schedule. Try being more specific with your interests!",
           variant: "default",
         });
       }
@@ -116,7 +117,7 @@ export default function HomePage() {
       const generateAndSetPackingList = async () => {
         setLoadingPackingList(true);
         try {
-          const numDays = itinerary.length > 0 ? itinerary.length : 1; // Default to 1 day if itinerary is empty
+          const numDays = itinerary.length > 0 ? itinerary.length : 1; 
           let weatherSummary = `General weather for ${formData.destination}.`;
           if (weatherDataForPacking?.forecasts && weatherDataForPacking.forecasts.length > 0) {
             const todayForecast = weatherDataForPacking.forecasts[0];
@@ -179,7 +180,19 @@ export default function HomePage() {
     try {
       const accordions = element.querySelectorAll('div[data-state="closed"]');
       accordions.forEach(acc => (acc as HTMLElement).setAttribute('data-state', 'open'));
-      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      // Ensure all images are loaded before capturing
+      const images = Array.from(element.querySelectorAll('img'));
+      await Promise.all(
+        images.map(img => {
+          if (img.complete) return Promise.resolve();
+          return new Promise(resolve => {
+            img.onload = img.onerror = resolve;
+          });
+        })
+      );
+      
+      await new Promise(resolve => setTimeout(resolve, 500)); // Increased delay for rendering complex elements
 
       const canvas = await html2canvas(element, {
         scale: 1.5, 
@@ -189,15 +202,18 @@ export default function HomePage() {
         scrollY: -window.scrollY, 
         windowWidth: element.scrollWidth,
         windowHeight: element.scrollHeight,
+        removeContainer: true, // Clean up container after capture
       });
 
       accordions.forEach(acc => (acc as HTMLElement).setAttribute('data-state', 'closed'));
 
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'pt',
-        format: 'a4'
+        orientation: 'p', // portrait
+        unit: 'pt', // points
+        format: 'a4', // A4 page size
+        putOnlyUsedFonts: true,
+        compress: true,
       });
 
       const pdfWidth = pdf.internal.pageSize.getWidth();
@@ -216,19 +232,21 @@ export default function HomePage() {
 
       for (let i = 0; i < totalPages; i++) {
         if (i > 0) pdf.addPage();
-        const sourceY = i * (pdfHeight/ratio);
+        // Calculate Y offset for the current page's portion of the image
+        const sourceY = i * (pdfHeight / ratio); // Y position in the source canvas
+        
         pdf.addImage(
             imgData, 
             'PNG', 
-            (pdfWidth - effectiveImgWidth) / 2, 
-            0, 
+            (pdfWidth - effectiveImgWidth) / 2, // Center the image horizontally
+            0, // Start at the top of the PDF page
             effectiveImgWidth, 
             effectiveImgHeight,
-            undefined, 
-            'FAST', 
-            0, 
-            0, 
-            -sourceY 
+            undefined, // alias
+            'FAST', // compression
+            0, // rotation
+            0, // xOffset (in image) - not needed when using sourceY for cropping
+            -sourceY // yOffset (in image) - negative to crop from top of image
         );
       }
 
@@ -236,7 +254,7 @@ export default function HomePage() {
       toast({ title: "PDF Exported!", description: "Your itinerary has been saved." });
     } catch (e) {
       console.error("Error generating PDF:", e);
-      toast({ title: "PDF Export Failed", description: "An error occurred while generating the PDF. The content might be too complex.", variant: "destructive" });
+      toast({ title: "PDF Export Failed", description: "An error occurred. The content might be too complex or an image failed to load.", variant: "destructive" });
     }
   };
 
@@ -254,12 +272,12 @@ export default function HomePage() {
             <ItineraryForm onSubmit={handleGeneratePlan} loading={loading} />
             
             {loading && !suggestions && ( 
-              <Card className="shadow-xl animate-pulse">
-                <CardHeader><Skeleton className="h-8 w-3/4 rounded-md" /></CardHeader>
+              <Card className="shadow-xl animate-pulse bg-card/80 backdrop-blur-sm">
+                <CardHeader><Skeleton className="h-8 w-3/4 rounded-md bg-muted/70" /></CardHeader>
                 <CardContent className="space-y-4 pt-4">
-                  <Skeleton className="h-6 w-full rounded-md" />
-                  <Skeleton className="h-24 w-full rounded-lg" />
-                  <Skeleton className="h-24 w-full rounded-lg" />
+                  <Skeleton className="h-6 w-full rounded-md bg-muted/70" />
+                  <Skeleton className="h-24 w-full rounded-lg bg-muted/70" />
+                  <Skeleton className="h-24 w-full rounded-lg bg-muted/70" />
                 </CardContent>
               </Card>
             )}
@@ -268,7 +286,7 @@ export default function HomePage() {
 
           <div className="lg:col-span-2 space-y-6 md:space-y-8">
             {error && (
-              <Alert variant="destructive" className="shadow-xl border-destructive/70 bg-destructive/10">
+              <Alert variant="destructive" className="shadow-xl border-destructive/70 bg-destructive/10 backdrop-blur-sm">
                 <Terminal className="h-5 w-5" />
                 <AlertTitle className="text-lg font-semibold">Oops! Something Went Wrong.</AlertTitle>
                 <AlertDescription className="text-base">{error}</AlertDescription>
@@ -276,13 +294,13 @@ export default function HomePage() {
             )}
 
             {loading && !itinerary && ( 
-              <Card className="shadow-xl animate-pulse">
-                <CardHeader><Skeleton className="h-8 w-1/2 rounded-md" /></CardHeader>
+              <Card className="shadow-xl animate-pulse bg-card/80 backdrop-blur-sm">
+                <CardHeader><Skeleton className="h-8 w-1/2 rounded-md bg-muted/70" /></CardHeader>
                 <CardContent className="space-y-3 pt-4">
-                  <Skeleton className="h-6 w-3/4 rounded-md" />
-                  <Skeleton className="h-5 w-full rounded-md" />
-                  <Skeleton className="h-5 w-5/6 rounded-md" />
-                  <Skeleton className="h-5 w-full rounded-md" />
+                  <Skeleton className="h-6 w-3/4 rounded-md bg-muted/70" />
+                  <Skeleton className="h-5 w-full rounded-md bg-muted/70" />
+                  <Skeleton className="h-5 w-5/6 rounded-md bg-muted/70" />
+                  <Skeleton className="h-5 w-full rounded-md bg-muted/70" />
                 </CardContent>
               </Card>
             )}
@@ -297,12 +315,12 @@ export default function HomePage() {
             )}
 
             {!loading && !itinerary && !error && !formData && (
-                 <Card className="shadow-2xl bg-gradient-to-tr from-primary/80 to-accent/80 text-primary-foreground border-none transition-all hover:shadow-primary/30 hover:shadow-2xl">
+                 <Card className="shadow-2xl bg-gradient-to-tr from-primary/90 via-primary to-accent/90 text-primary-foreground border-none transition-all hover:shadow-primary/40 hover:shadow-2xl">
                     <CardHeader className="pb-3">
-                        <CardTitle className="text-3xl font-extrabold flex items-center gap-2 drop-shadow-md">
-                          <Info size={32}/> Welcome to WanderWise!
+                        <CardTitle className="text-3xl font-extrabold flex items-center gap-2.5 drop-shadow-md">
+                          <CalendarDays size={36} className="text-accent"/> Welcome to WanderWise!
                         </CardTitle>
-                        <CardDescription className="text-primary-foreground/90 text-lg pt-1">Your AI-powered journey planner. Fill the form to begin your adventure!</CardDescription>
+                        <CardDescription className="text-primary-foreground/90 text-lg pt-1.5">Your AI-powered journey planner. Fill the form to begin your adventure!</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <p className="text-primary-foreground/80 text-base">Let's turn your travel dreams into reality, one smart plan at a time.</p>
@@ -313,7 +331,7 @@ export default function HomePage() {
             {formData && (itinerary || loading) && (
               <>
                 {(loading && (!itinerary || itinerary.length === 0)) && (
-                  <Skeleton className="h-[400px] w-full rounded-xl shadow-xl" />
+                  <Skeleton className="h-[400px] w-full rounded-xl shadow-xl bg-muted/70" />
                 )}
                 <MapDisplayWrapper
                   destination={formData.destination}
@@ -327,11 +345,11 @@ export default function HomePage() {
             )}
 
             {loadingPackingList && formData && (
-              <Card className="shadow-xl mt-8 animate-pulse">
-                <CardHeader><Skeleton className="h-8 w-3/4 rounded-md" /></CardHeader>
+              <Card className="shadow-xl mt-8 animate-pulse bg-card/80 backdrop-blur-sm">
+                <CardHeader><Skeleton className="h-8 w-3/4 rounded-md bg-muted/70" /></CardHeader>
                 <CardContent className="space-y-4 pt-4">
-                    <Skeleton className="h-6 w-full rounded-md" />
-                    <Skeleton className="h-20 w-full rounded-lg" />
+                    <Skeleton className="h-6 w-full rounded-md bg-muted/70" />
+                    <Skeleton className="h-20 w-full rounded-lg bg-muted/70" />
                 </CardContent>
               </Card>
             )}
@@ -339,7 +357,7 @@ export default function HomePage() {
               <PackingListDisplay packingListItems={packingList} destination={formData.destination} />
             )}
             {!loading && !loadingPackingList && packingList === null && itinerary && formData && (
-                 <Card className="shadow-xl mt-8 bg-muted/50">
+                 <Card className="shadow-xl mt-8 bg-muted/50 backdrop-blur-sm">
                     <CardHeader><CardTitle className="text-primary/90">Preparing Your Packing List...</CardTitle></CardHeader>
                     <CardContent>
                         <p className="text-muted-foreground">Just a moment, curating essentials for your trip to {formData.destination}.</p>
@@ -349,10 +367,17 @@ export default function HomePage() {
           </div>
         </div>
       </main>
-      <footer className="text-center p-6 text-muted-foreground/80 text-sm border-t border-border/50 mt-12 bg-background/50">
+      <footer className="text-center p-6 text-muted-foreground/80 text-sm border-t border-border/50 mt-12 bg-background/50 backdrop-blur-sm">
         <p>© {new Date().getFullYear()} WanderWise by Firebase Studio. Adventure Awaits, Plan Smart!</p>
         <p className="mt-1">Made with love and effort by Abhinav.</p>
+        <p className="mt-1">
+          <Link href="https://portfolio-latest-steel.vercel.app" target="_blank" rel="noopener noreferrer" className="text-primary hover:text-accent underline transition-colors">
+            see more of my work
+          </Link>
+        </p>
       </footer>
     </div>
   );
 }
+
+    
