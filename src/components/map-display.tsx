@@ -3,7 +3,8 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { MapIcon } from "lucide-react"; // Correct import for MapIcon
+import { MapIcon } from "lucide-react";
+// Changed import style
 import * as GoogleMaps from "@vis.gl/react-google-maps";
 import { useEffect, useState } from "react";
 
@@ -29,7 +30,7 @@ function InnerMapDisplay({ destination, routePolyline }: MapDisplayProps) {
 
   useEffect(() => {
     let isMounted = true;
-    if (destination && apiKey && window.google && window.google.maps) {
+    if (destination && apiKey && window.google && window.google.maps && typeof window.google.maps.Geocoder === 'function') { // Added Geocoder check
       setLoading(true);
       const geocoder = new window.google.maps.Geocoder();
       geocoder.geocode({ address: destination }, (results, status) => {
@@ -57,16 +58,20 @@ function InnerMapDisplay({ destination, routePolyline }: MapDisplayProps) {
             setLoading(false);
             setPosition(null);
         }
-    } else { // window.google or window.google.maps not available yet
+    } else if (window.google && window.google.maps && typeof window.google.maps.Geocoder !== 'function') {
         if (isMounted) {
-            // This case might indicate API script hasn't loaded, could retry or show specific message
-            // For now, treat as loading or a setup issue
-            // setError("Google Maps script not loaded yet.");
-            setLoading(false); // Or true if we implement a retry
+            // Geocoding library specifically not loaded
+            setError("Google Maps Geocoding library not available. Ensure it's loaded via APIProvider.");
+            console.warn("Geocoder not available, check APIProvider libraries prop.");
+            setLoading(false);
+        }
+    } else { 
+        if (isMounted) {
+            setLoading(false); 
         }
     }
     return () => { isMounted = false; }
-  }, [destination, apiKey]);
+  }, [destination, apiKey]); // mapInstance removed as direct dependency for geocoding
 
   useEffect(() => {
     if (routePolyline && window.google && window.google.maps && window.google.maps.geometry && window.google.maps.geometry.encoding) {
@@ -99,12 +104,13 @@ function InnerMapDisplay({ destination, routePolyline }: MapDisplayProps) {
     // Clear previous polyline if it exists
     if (currentMapPolyline) {
       currentMapPolyline.setMap(null);
+      setCurrentMapPolyline(null); // Ensure state is updated
     }
 
     if (decodedPath && decodedPath.length > 0 && window.google && window.google.maps) {
       const newPolyline = new window.google.maps.Polyline({
         path: decodedPath,
-        strokeColor: "hsl(var(--primary))", 
+        strokeColor: "hsl(var(--primary))",
         strokeOpacity: 0.9,
         strokeWeight: 6,
         clickable: false,
@@ -114,18 +120,9 @@ function InnerMapDisplay({ destination, routePolyline }: MapDisplayProps) {
       });
       newPolyline.setMap(mapInstance);
       setCurrentMapPolyline(newPolyline);
-    } else {
-      setCurrentMapPolyline(null); // Ensure it's cleared if no path
     }
     
-    // This cleanup function will be called when the dependencies (mapInstance, decodedPath) change,
-    // or when the component unmounts. It should clean up the *current* polyline that was just drawn.
-    // A more robust way for cleanup is to capture 'newPolyline' in the closure if one was created.
-    // However, given `currentMapPolyline` is set, cleaning based on its state before this effect
-    // re-runs (or on unmount) should be okay.
     return () => {
-      // If newPolyline was created in this effect's run, it's now in currentMapPolyline.
-      // So, this logic will clean up the polyline that this effect instance managed.
       if (currentMapPolyline) { 
         currentMapPolyline.setMap(null);
       }
@@ -137,7 +134,7 @@ function InnerMapDisplay({ destination, routePolyline }: MapDisplayProps) {
     <Card className="shadow-lg">
       <CardHeader>
         <CardTitle className="text-xl font-semibold text-accent flex items-center gap-2">
-          <MapIcon className="h-6 w-6" /> {/* Correctly using MapIcon from lucide-react */}
+          <MapIcon className="h-6 w-6" /> {/* Corrected to use Lucide MapIcon */}
           Interactive Map
         </CardTitle>
         <CardDescription>Visualize your destination{destination ? `: ${destination}` : ''}{routePolyline ? ' and route' : ''}</CardDescription>
@@ -150,7 +147,7 @@ function InnerMapDisplay({ destination, routePolyline }: MapDisplayProps) {
           <div className="h-[400px] w-full rounded-md overflow-hidden border">
             <GoogleMaps.Map 
               center={position || undefined} 
-              zoom={position && !decodedPath ? 10 : 5} 
+              zoom={position && !decodedPath ? 10 : (decodedPath ? 5 : 10) } // Adjusted zoom logic
               mapId="wanderwise-map"
               gestureHandling={'greedy'}
               disableDefaultUI={true}
@@ -193,7 +190,9 @@ export function MapDisplayWrapper(props: MapDisplayProps) {
         );
     }
     
-    const libraries: ("geometry" | "places" | "marker")[] = ['geometry'];
+    // Updated to include 'geocoding'
+    const libraries: ("geometry" | "places" | "marker" | "geocoding" | "routes" | "visualization" | "drawing" | "localContext")[] = ['geometry', 'geocoding'];
+
 
     return (
         <GoogleMaps.APIProvider apiKey={apiKey} libraries={libraries}> 
@@ -201,3 +200,4 @@ export function MapDisplayWrapper(props: MapDisplayProps) {
         </GoogleMaps.APIProvider>
     );
 }
+
