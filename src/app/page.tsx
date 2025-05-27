@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useRef, useEffect } from "react"; // Added useEffect
+import { useState, useRef, useEffect } from "react";
 import { AppHeader } from "@/components/app-header";
 import { ItineraryForm, type ItineraryFormValues } from "@/components/itinerary-form";
 import { ItineraryDisplay } from "@/components/itinerary-display";
@@ -19,7 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { Skeleton } from "@/components/ui/skeleton";
-import type { GetWeatherAndAirQualityOutput } from "@/ai/flows/get-weather-and-air-quality"; // For weather summary
+import type { GetWeatherAndAirQualityOutput } from "@/ai/flows/get-weather-and-air-quality";
 
 export default function HomePage() {
   const [formData, setFormData] = useState<ItineraryFormValues | null>(null);
@@ -33,7 +33,6 @@ export default function HomePage() {
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  // Callback to receive weather data from WeatherDisplay, to be used for packing list
   const handleWeatherDataFetched = (data: GetWeatherAndAirQualityOutput | null) => {
     setWeatherDataForPacking(data);
   };
@@ -45,7 +44,7 @@ export default function HomePage() {
     setSuggestions(null);
     setCurrentRoutePolyline(null);
     setPackingList(null);
-    setWeatherDataForPacking(null); // Reset weather data for packing
+    setWeatherDataForPacking(null);
     setFormData(values);
 
     try {
@@ -102,11 +101,10 @@ export default function HomePage() {
         variant: "destructive",
       });
     } finally {
-      setLoading(false); // Main loading stops, packing list might start
+      setLoading(false); 
     }
   };
   
-  // Effect to generate packing list after itinerary and weather data are available
   useEffect(() => {
     if (itinerary && itinerary.length > 0 && formData && weatherDataForPacking && !loading && !loadingPackingList && !packingList) {
       const generateAndSetPackingList = async () => {
@@ -124,7 +122,6 @@ export default function HomePage() {
              weatherSummary += ` Weather data fetch had an error: ${weatherDataForPacking.error}. Pack generally.`;
           }
 
-
           const packingListResponse = await generatePackingList({
             destination: formData.destination,
             numberOfDays: numDays,
@@ -132,18 +129,18 @@ export default function HomePage() {
             weatherSummary: weatherSummary,
           });
 
-          if (packingListResponse && packingListResponse.items) {
+          if (packingListResponse && packingListResponse.items && packingListResponse.items.length > 0) {
             setPackingList(packingListResponse.items);
             toast({
-              title: "Packing List Ready!",
-              description: "Your smart packing list has been generated.",
+              title: "Essential Packing List Ready!",
+              description: "Your smart list of 5 must-have items is here.",
             });
           } else {
             console.warn("Packing list generated but is empty or invalid:", packingListResponse);
-            setPackingList([]);
+            setPackingList([]); // Explicitly set to empty array for "no items" message in component
             toast({
               title: "Packing List Note",
-              description: "The AI couldn't generate a packing list for this trip.",
+              description: "The AI couldn't generate a packing list for this trip. Showing defaults.",
             });
           }
         } catch (packingErr) {
@@ -154,7 +151,7 @@ export default function HomePage() {
             description: packErrMsg,
             variant: "destructive",
           });
-          setPackingList([]); // Ensure it's cleared on error
+          setPackingList([]); 
         } finally {
           setLoadingPackingList(false);
         }
@@ -162,7 +159,7 @@ export default function HomePage() {
       generateAndSetPackingList();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [itinerary, formData, weatherDataForPacking, loading]); // Dependencies for triggering packing list generation
+  }, [itinerary, formData, weatherDataForPacking, loading]);
 
 
   const handleExportPDF = async (element: HTMLElement | null) => {
@@ -310,7 +307,7 @@ export default function HomePage() {
             {/* Packing List Section */}
             {loadingPackingList && formData && (
               <Card className="shadow-xl mt-8">
-                <CardHeader><CardTitle>Generating Your Packing List...</CardTitle></CardHeader>
+                <CardHeader><CardTitle>Crafting Your Essential Packing List...</CardTitle></CardHeader>
                 <CardContent className="space-y-4">
                     <Skeleton className="h-8 w-3/4" />
                     <Skeleton className="h-6 w-full" />
@@ -319,7 +316,15 @@ export default function HomePage() {
               </Card>
             )}
             {packingList && !loadingPackingList && formData && (
-              <PackingListDisplay packingListItems={packingList} />
+              <PackingListDisplay packingListItems={packingList} destination={formData.destination} />
+            )}
+            {!loading && !loadingPackingList && packingList === null && itinerary && formData && (
+                 <Card className="shadow-xl mt-8">
+                    <CardHeader><CardTitle>Preparing Packing List...</CardTitle></CardHeader>
+                    <CardContent>
+                        <p className="text-muted-foreground">Waiting for all data to generate your packing list.</p>
+                    </CardContent>
+                </Card>
             )}
           </div>
         </div>
@@ -330,3 +335,6 @@ export default function HomePage() {
     </div>
   );
 }
+
+
+    

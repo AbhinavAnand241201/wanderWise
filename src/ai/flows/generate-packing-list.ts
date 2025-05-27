@@ -1,7 +1,7 @@
 
 'use server';
 /**
- * @fileOverview A Genkit flow to generate a smart packing list.
+ * @fileOverview A Genkit flow to generate a smart, concise packing list of 5 essential items.
  *
  * - generatePackingList - Generates a packing list based on trip details.
  * - GeneratePackingListInput - Input schema for the flow.
@@ -31,24 +31,15 @@ export type GeneratePackingListInput = z.infer<
 >;
 
 const PackingListItemSchema = z.object({
-  name: z.string().describe('The name of the packing item (e.g., "Hiking Boots", "Sunscreen").'),
-  category: z
-    .string()
-    .describe(
-      'The category of the item (e.g., "Clothing", "Toiletries", "Documents", "Electronics", "Miscellaneous").'
-    ),
-  quantity: z
-    .string()
-    .optional()
-    .describe('Suggested quantity (e.g., "1 pair", "3-4", "As needed").'),
-  notes: z.string().optional().describe('Any additional notes or considerations for the item (e.g., "waterproof recommended", "check airline policy").'),
-  amazonSearchQuery: z.string().optional().describe('A concise search query for finding this item on Amazon.com (e.g., "travel adapter universal", "quick dry hiking pants men").'),
-  imageKeywords: z.string().optional().describe('1-2 generic keywords for a placeholder image of this item (e.g., "hiking boots", "sunscreen bottle", "passport").'),
+  name: z.string().describe('The name of the essential packing item (e.g., "Passport", "Universal Adapter").'),
+  reason: z.string().describe('A smart, concise, one-line reason why this item is essential for the trip.'),
+  lucideIconName: z.string().optional().describe('A valid name of a lucide-react icon, case-sensitive (e.g., "Shirt", "Sun", "Passport", "Smartphone", "CreditCard", "Briefcase", "MapPin", "Camera", "Headphones", "BookOpen"). Choose the most relevant one.'),
+  amazonSearchQuery: z.string().optional().describe('A concise search query for finding this item on Amazon (e.g., "universal travel adapter", "noise cancelling headphones", "comfortable walking shoes").'),
 });
 export type PackingListItem = z.infer<typeof PackingListItemSchema>;
 
 const GeneratePackingListOutputSchema = z.object({
-  items: z.array(PackingListItemSchema).describe('A list of suggested packing items, each with a name, category, optional quantity, notes, an Amazon search query, and image keywords.'),
+  items: z.array(PackingListItemSchema).max(5).describe('A list of exactly 5 essential packing items. Each item must have a name, a one-line reason, a suggested lucideIconName, and an Amazon search query.'),
 });
 export type GeneratePackingListOutput = z.infer<
   typeof GeneratePackingListOutputSchema
@@ -59,43 +50,39 @@ export async function generatePackingList(input: GeneratePackingListInput): Prom
 }
 
 const prompt = ai.definePrompt({
-  name: 'generatePackingListPrompt',
+  name: 'generateEssentialPackingListPrompt',
   input: {schema: GeneratePackingListInputSchema},
   output: {schema: GeneratePackingListOutputSchema},
-  prompt: `You are an AI assistant that helps users create smart packing lists for their trips.
-Based on the provided destination, trip duration, user interests, and weather summary, generate a comprehensive list of packing items.
+  prompt: `You are an AI assistant that helps users create an ultra-concise, smart packing list of 5 absolutely essential items for their trip.
+These should be "can't go without it" items.
 
+Based on the provided details:
 Destination: {{{destination}}}
 Number of Days: {{{numberOfDays}}}
 Interests/Activities: {{{interests}}}
 Weather Summary: {{{weatherSummary}}}
 
-For each item, provide:
-- "name": The item name (e.g., "Hiking Boots", "Passport").
-- "category": Categorize the item (e.g., "Clothing", "Toiletries", "Documents", "Electronics", "Miscellaneous").
-- "quantity": A suggested quantity (e.g., "1 pair", "2-3", "1 per week of travel"). Be sensible.
-- "notes": (Optional) Any brief, helpful notes (e.g., "waterproof recommended", "check local voltage").
-- "amazonSearchQuery": A concise and effective search query for finding a generic version of this item on Amazon.com. For example, for "Hiking Boots", use "waterproof hiking boots men" or "lightweight hiking boots women". For "Travel Adapter", use "universal travel adapter".
-- "imageKeywords": 1-2 generic keywords for a placeholder image, like "t-shirt" or "passport" or "sunscreen bottle".
+Generate a list of exactly 5 essential packing items. For each item, provide:
+- "name": The item name (e.g., "Passport & Visas").
+- "reason": A smart, concise, one-line reason why this item is absolutely essential for this specific trip.
+- "lucideIconName": A valid, case-sensitive name of a lucide-react icon that best represents the item (e.g., "Passport", "Smartphone", "CreditCard", "Luggage", "Sun", "CloudRain", "Map", "Camera", "Headphones", "Pill"). Choose from common and appropriate icons. Examples: Shirt, Briefcase, BookOpen, Thermometer.
+- "amazonSearchQuery": A concise and effective search query for finding a generic version of this item on Amazon. For example, for "Passport Wallet", use "rfid passport wallet".
 
-Consider the trip duration to suggest appropriate quantities for clothing and toiletries.
-Tailor items to the interests (e.g., swimwear for beach, appropriate gear for hiking).
-Factor in the weather summary.
+Tailor items to the destination, duration, interests, and weather.
+Prioritize documents, essential electronics, critical clothing, and health/safety items based on context.
 
-Return the response as a single JSON object that strictly adheres to the GeneratePackingListOutputSchema. The main key should be "items", containing an array of PackingListItem objects.
+Return the response as a single JSON object that strictly adheres to the GeneratePackingListOutputSchema. The main key should be "items", containing an array of exactly 5 PackingListItem objects.
 
 Example of a single item structure:
 {
-  "name": "Rain Jacket",
-  "category": "Clothing",
-  "quantity": "1",
-  "notes": "Lightweight and packable, especially if rain is expected.",
-  "amazonSearchQuery": "lightweight packable rain jacket",
-  "imageKeywords": "rain jacket"
+  "name": "Portable Charger",
+  "reason": "Keeps your devices powered for navigation and emergencies on the go.",
+  "lucideIconName": "BatteryCharging",
+  "amazonSearchQuery": "high capacity power bank"
 }
 
-Ensure the output is a valid JSON object.
-Packing List:`,
+Ensure the output is a valid JSON object with exactly 5 items.
+Essential Packing List:`,
 });
 
 
@@ -107,10 +94,34 @@ const generatePackingListFlow = ai.defineFlow(
   },
   async (input) => {
     const {output} = await prompt(input);
-    if (!output || !output.items) {
-      console.error("LLM did not return the expected packing list structure.");
-      return { items: [] };
+    if (!output || !output.items || output.items.length === 0) {
+      console.error("LLM did not return the expected packing list structure or returned an empty list.");
+      // Fallback for robustness, though the prompt strongly requests 5 items.
+      return { items: [
+        { name: "Universal Adapter", reason: "To charge your devices in any country.", lucideIconName: "Plug", amazonSearchQuery: "universal travel adapter" },
+        { name: "Comfortable Shoes", reason: "Essential for exploring without discomfort.", lucideIconName: "Footprints", amazonSearchQuery: "comfortable walking shoes" },
+        { name: "Passport/ID", reason: "Required for travel and identification.", lucideIconName: "Fingerprint", amazonSearchQuery: "passport holder" },
+        { name: "Medication", reason: "Any personal prescribed medication.", lucideIconName: "Pill", amazonSearchQuery: "travel pill organizer" },
+        { name: "Reusable Water Bottle", reason: "Stay hydrated and reduce plastic waste.", lucideIconName: "GlassWater", amazonSearchQuery: "collapsible water bottle" },
+      ].slice(0,5) };
     }
-    return output;
+     // Ensure we always return exactly 5 items, even if the LLM gives more or less
+    const essentialItems = output.items.slice(0, 5);
+    while (essentialItems.length < 5) {
+      // Add generic essential items if LLM returned too few
+      const fallbacks = [
+        { name: "Credit/Debit Card", reason: "For payments and emergencies.", lucideIconName: "CreditCard", amazonSearchQuery: "travel money belt" },
+        { name: "Smartphone", reason: "For communication, maps, and information.", lucideIconName: "Smartphone", amazonSearchQuery: "unlocked smartphone" },
+        { name: "Weather-appropriate Outwear", reason: "Based on forecast, essential for comfort.", lucideIconName: "Wind", amazonSearchQuery: "packable rain jacket" },
+        { name: "Local Currency", reason: "Some cash for places that don't accept cards.", lucideIconName: "Landmark", amazonSearchQuery: "currency converter" },
+        { name: "Sunglasses", reason: "Protect your eyes, especially in sunny destinations.", lucideIconName: "Sunglasses", amazonSearchQuery: "uv protection sunglasses" },
+      ];
+      const needed = 5 - essentialItems.length;
+      essentialItems.push(...fallbacks.slice(0, needed));
+    }
+    return { items: essentialItems };
   }
 );
+
+
+    

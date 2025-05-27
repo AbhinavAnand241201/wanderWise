@@ -3,17 +3,19 @@
 
 import type { PackingListItem } from "@/ai/flows/generate-packing-list";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { ListChecks, ShoppingCart, ImageOff, Box } from "lucide-react";
-import Image from "next/image";
+import { Button } from "@/components/ui/button";
+import { ListChecks, ShoppingCart, Package, AlertTriangle } from "lucide-react";
+import * as Icons from 'lucide-react';
 import Link from "next/link";
 
 interface PackingListDisplayProps {
   packingListItems: PackingListItem[];
+  destination: string;
 }
 
-const placeholderImageBase = "https://placehold.co/100x100.png";
+const amazonBaseUrl = "https://www.amazon.in/?&tag=googhydrabk1-21&ref=pd_sl_481kbhct8q_e&adgrpid=155259814713&hvpone=&hvptwo=&hvadid=674893539977&hvpos=&hvnetw=g&hvrand=13194572512749415799&hvqmt=e&hvdev=c&hvdvcmdl=&hvlocint=&hvlocphy=9149733&hvtargid=kwd-12357690325&hydadcr=5619_2359467&gad_source=1";
 
-export function PackingListDisplay({ packingListItems }: PackingListDisplayProps) {
+export function PackingListDisplay({ packingListItems, destination }: PackingListDisplayProps) {
   if (!packingListItems || packingListItems.length === 0) {
     return (
       <Card className="shadow-xl mt-8">
@@ -23,75 +25,69 @@ export function PackingListDisplay({ packingListItems }: PackingListDisplayProps
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-muted-foreground">No packing list items generated for this trip.</p>
+          <p className="text-muted-foreground">No packing list items generated for this trip yet.</p>
         </CardContent>
       </Card>
     );
   }
 
-  const categorizedItems = packingListItems.reduce<Record<string, PackingListItem[]>>((acc, item) => {
-    const category = item.category || "Miscellaneous";
-    if (!acc[category]) {
-      acc[category] = [];
+  const renderIcon = (iconName: string | undefined) => {
+    if (!iconName) return <Icons.Package size={24} className="text-primary" />;
+    const IconComponent = (Icons as any)[iconName] || Icons.Package;
+    try {
+      return <IconComponent size={24} className="text-primary flex-shrink-0" />;
+    } catch (e) {
+      console.warn(`Lucide icon "${iconName}" not found, using default. Error:`, e);
+      return <Icons.Package size={24} className="text-primary" />;
     }
-    acc[category].push(item);
-    return acc;
-  }, {});
+  };
 
   return (
     <Card className="shadow-xl mt-8">
       <CardHeader>
         <CardTitle className="text-xl font-bold text-primary flex items-center gap-2">
-          <ListChecks className="h-6 w-6" /> Smart Packing List
+          <ListChecks className="h-6 w-6" /> Essential Packing List
         </CardTitle>
-        <CardDescription>Here's a suggested list of items to pack for your trip.</CardDescription>
+        <CardDescription className="text-lg font-semibold text-accent">
+          Planning to visit {destination} without these items... bad ideaaaa!!!
+        </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-6">
-        {Object.entries(categorizedItems).map(([category, items]) => (
-          <div key={category}>
-            <h3 className="text-lg font-semibold text-accent mb-3 border-b pb-1 flex items-center gap-2">
-              <Box size={20}/> {category}
-            </h3>
-            <ul className="space-y-3">
-              {items.map((item, index) => (
-                <li key={`${category}-${index}-${item.name}`} className="flex items-start gap-3 p-3 bg-muted/30 rounded-md shadow-sm hover:shadow-md transition-shadow">
-                  <div className="relative w-16 h-16 bg-muted rounded overflow-hidden flex-shrink-0 border">
-                    <Image
-                      src={placeholderImageBase} // Generic placeholder
-                      alt={`Placeholder for ${item.name}`}
-                      fill
-                      sizes="64px"
-                      className="object-contain p-1" // Use contain to show the whole placeholder
-                      data-ai-hint={item.imageKeywords || "item object"}
-                    />
-                  </div>
-                  <div className="flex-grow">
-                    <h4 className="font-medium">{item.name}</h4>
-                    {item.quantity && <p className="text-sm text-muted-foreground">Quantity: {item.quantity}</p>}
-                    {item.notes && <p className="text-xs text-muted-foreground italic mt-0.5">Note: {item.notes}</p>}
-                  </div>
-                  {item.amazonSearchQuery && (
-                    <Link
-                      href={`https://www.amazon.com/s?k=${encodeURIComponent(item.amazonSearchQuery)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="ml-auto flex-shrink-0"
-                      title={`Search for ${item.name} on Amazon`}
-                    >
-                      <button className="p-2 bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-md transition-colors">
-                        <ShoppingCart size={18} />
-                      </button>
-                    </Link>
-                  )}
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
+      <CardContent className="space-y-4">
+        <ul className="space-y-3">
+          {packingListItems.map((item, index) => (
+            <li 
+              key={`${index}-${item.name}`} 
+              className="flex items-start gap-4 p-4 bg-muted/30 rounded-lg shadow-sm hover:shadow-md transition-shadow"
+            >
+              <div className="mt-1">
+                {renderIcon(item.lucideIconName)}
+              </div>
+              <div className="flex-grow">
+                <h4 className="font-semibold text-base">{item.name}</h4>
+                <p className="text-sm text-muted-foreground">{item.reason}</p>
+              </div>
+              {item.amazonSearchQuery && (
+                <Button asChild variant="outline" size="sm" className="ml-auto flex-shrink-0">
+                  <Link
+                    href={`${amazonBaseUrl}&k=${encodeURIComponent(item.amazonSearchQuery)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={`Shop for ${item.name} on Amazon.in`}
+                    className="flex items-center gap-1"
+                  >
+                    <ShoppingCart size={16} /> Shop
+                  </Link>
+                </Button>
+              )}
+            </li>
+          ))}
+        </ul>
          <p className="text-xs text-muted-foreground mt-6 text-center">
-            This packing list is AI-generated. Always double-check against your specific needs and travel regulations. Links to Amazon are for convenience.
+            This packing list is AI-generated. Always double-check your specific needs. Links to Amazon.in are for convenience.
         </p>
       </CardContent>
     </Card>
   );
 }
+
+    
