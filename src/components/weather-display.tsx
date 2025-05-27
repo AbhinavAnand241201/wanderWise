@@ -8,7 +8,8 @@ import { getWeatherAndAirQuality, type GetWeatherAndAirQualityOutput, type GetWe
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface WeatherDisplayProps {
-  location: string; // This will be the input to the Genkit flow
+  location: string; 
+  onWeatherDataFetched?: (data: GetWeatherAndAirQualityOutput | null) => void; // Optional callback
 }
 
 // Helper to map Google icon codes (or conditions) to Lucide icons
@@ -16,7 +17,6 @@ const getWeatherIcon = (iconCode?: string, condition?: string): React.ReactEleme
   const lowerCondition = condition?.toLowerCase() || "";
   // Google's icon codes are not publicly documented in a simple mapping.
   // We'll rely on condition string matching for a basic implementation.
-  // A more robust solution might involve a detailed mapping if Google provides one or using a third-party library.
   if (iconCode?.includes("day_clear") || lowerCondition.includes("clear") || lowerCondition.includes("sunny")) return <Sun className="h-5 w-5 text-yellow-400" />;
   if (iconCode?.includes("day_partial_cloud") || lowerCondition.includes("partly cloudy") || lowerCondition.includes("scattered clouds")) return <CloudSun className="h-5 w-5 text-sky-400" />;
   if (iconCode?.includes("cloudy") || lowerCondition.includes("mostly cloudy") || lowerCondition.includes("overcast")) return <Cloud className="h-5 w-5 text-gray-400" />;
@@ -27,7 +27,7 @@ const getWeatherIcon = (iconCode?: string, condition?: string): React.ReactEleme
 };
 
 
-export function WeatherDisplay({ location }: WeatherDisplayProps) {
+export function WeatherDisplay({ location, onWeatherDataFetched }: WeatherDisplayProps) {
   const [data, setData] = useState<GetWeatherAndAirQualityOutput | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -37,6 +37,7 @@ export function WeatherDisplay({ location }: WeatherDisplayProps) {
       setLoading(true);
       setError(null);
       setData(null);
+      if (onWeatherDataFetched) onWeatherDataFetched(null); // Clear previous data for packing list
       
       const input: GetWeatherAndAirQualityInput = { destination: location, days: 7 };
       getWeatherAndAirQuality(input)
@@ -45,16 +46,19 @@ export function WeatherDisplay({ location }: WeatherDisplayProps) {
           if (response.error) {
             setError(response.error);
           }
+          if (onWeatherDataFetched) onWeatherDataFetched(response); // Pass data to parent
         })
         .catch(err => {
           console.error("Error fetching weather/AQ data:", err);
           setError(err.message || "Failed to fetch weather and air quality data.");
+           if (onWeatherDataFetched) onWeatherDataFetched({destination: location, forecasts: null, airQuality: null, error: err.message || "Failed to fetch data."});
         })
         .finally(() => {
           setLoading(false);
         });
     }
-  }, [location]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location]); // Removed onWeatherDataFetched from deps to avoid re-fetching if only callback changes
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString + 'T00:00:00'); // Assume local timezone for display
@@ -79,7 +83,7 @@ export function WeatherDisplay({ location }: WeatherDisplayProps) {
             </div>
           </div>
         )}
-        {error && <p className="text-destructive"><AlertTriangle className="inline mr-2 h-4 w-4" />{error}</p>}
+        {error && !loading && <p className="text-destructive"><AlertTriangle className="inline mr-2 h-4 w-4" />{error}</p>}
         
         {data && !loading && (
           <div className="space-y-6">
@@ -131,7 +135,7 @@ export function WeatherDisplay({ location }: WeatherDisplayProps) {
               </div>
             )}
             
-            {!data.forecasts && !data.airQuality && !data.error && (
+            {!data.forecasts && !data.airQuality && !data.error && !loading && (
                  <p className="text-muted-foreground">Weather and air quality data will appear here.</p>
             )}
              <p className="text-xs text-muted-foreground mt-4">Weather and Air Quality data provided by Google. Accuracy may vary.</p>
