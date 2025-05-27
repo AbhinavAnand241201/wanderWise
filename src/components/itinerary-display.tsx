@@ -58,6 +58,7 @@ export function ItineraryDisplay({ itinerary, destination, onExportPDF, onRouteF
     const directionsKey = `d${dayIndex}-a${activityIndex}-a${activityIndex+1}`;
     const currentDirections = directionsData[directionsKey];
     const isLoadingDirections = directionsLoading[directionsKey];
+    const nextActivityName = nextActivity?.description.length > 20 ? nextActivity.description.substring(0,17) + '...' : nextActivity?.description;
 
     return (
       <div key={activityIndex} className="mb-3 p-3 border-l-2 border-accent/50 bg-background rounded-r-md shadow-sm">
@@ -76,6 +77,9 @@ export function ItineraryDisplay({ itinerary, destination, onExportPDF, onRouteF
         
         {activity.address && nextActivity && nextActivity.address && (
           <div className="mt-3 pt-2 border-t border-dashed">
+             <p className="text-xs text-muted-foreground mb-1">
+              Travel from {activity.description.length > 15 ? activity.description.substring(0,12) + '...' : activity.description} to {nextActivityName}:
+            </p>
             <Button
               variant="outline"
               size="sm"
@@ -88,12 +92,13 @@ export function ItineraryDisplay({ itinerary, destination, onExportPDF, onRouteF
               ) : (
                 <Route className="mr-2 h-3 w-3" />
               )}
-              Directions to {nextActivity.description.length > 20 ? nextActivity.description.substring(0,17) + '...' : nextActivity.description}
+              Show Route to {nextActivityName}
             </Button>
             {currentDirections && (
               <div className="mt-2 text-xs p-2 rounded-md bg-muted/70">
-                {currentDirections.summary && <p>{currentDirections.summary}</p>}
+                {currentDirections.summary && <p className="font-medium">Route Summary: {currentDirections.summary}</p>}
                 {currentDirections.error && <p className="text-destructive flex items-center gap-1"><AlertTriangle size={14}/> {currentDirections.error}</p>}
+                {currentDirections.summary && !currentDirections.error && <p className="text-primary/80 mt-1">Check the map for the visual route!</p>}
               </div>
             )}
           </div>
