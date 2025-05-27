@@ -2,7 +2,7 @@
 // src/ai/tools/google-apis-tool.ts
 'use server';
 /**
- * @fileOverview Genkit tools for interacting with Google APIs (Geocoding, Weather, Air Quality).
+ * @fileOverview Genkit tools for interacting with Google APIs (Geocoding, Weather, Air Quality, Places).
  */
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
@@ -10,9 +10,11 @@ import {
   geocodeAddress as geocodeAddressService, 
   getWeatherForecast as getWeatherForecastService,
   getCurrentAirQuality as getCurrentAirQualityService,
+  findPlacePhotoByTextSearch as findPlacePhotoByTextSearchService, // New service import
   type GeocodeLocation,
   type DailyForecast,
-  type AirQualityData
+  type AirQualityData,
+  type PlacePhotoReference
 } from '@/services/google-apis';
 
 // Geocoding Tool
@@ -27,7 +29,7 @@ const GeocodeAddressOutputSchema = z.object({
 export const geocodeAddressTool = ai.defineTool(
   {
     name: 'geocodeAddress',
-    description: 'Converts a textual address or place name into geographic coordinates (latitude and longitude). Use this to find coordinates for a location before fetching weather or air quality.',
+    description: 'Converts a textual address or place name into geographic coordinates (latitude and longitude). Use this to find coordinates for a location before fetching weather, air quality or finding places.',
     inputSchema: GeocodeAddressInputSchema,
     outputSchema: GeocodeAddressOutputSchema,
   },
@@ -36,7 +38,7 @@ export const geocodeAddressTool = ai.defineTool(
       return await geocodeAddressService(input.address);
     } catch (error) {
       console.error("Error in geocodeAddressTool:", error);
-      return null; // Return null on error to allow flow to continue if designed for it
+      return null; 
     }
   }
 );
@@ -99,6 +101,38 @@ export const getAirQualityTool = ai.defineTool(
     } catch (error) {
       console.error("Error in getAirQualityTool:", error);
       return null;
+    }
+  }
+);
+
+// Find Place Photo Tool (New Tool)
+const FindPlacePhotoInputSchema = z.object({
+  placeName: z.string().describe('The name of the place to find a photo for (e.g., "Louvre Museum", "Joe\'s Pizza Shack").'),
+  destinationContext: z.string().describe('The broader destination context to help disambiguate the place name (e.g., "Paris, France", "New York City").'),
+});
+const FindPlacePhotoOutputSchema = z.object({
+  photoReference: z.string().nullable(), // photo_reference can be null if no photo found
+}).describe("A photo reference string from Google Places API, or null if not found.");
+
+
+export const findPlacePhotoTool = ai.defineTool(
+  {
+    name: 'findPlacePhoto',
+    description: 'Finds a photo reference for a given place name within a destination context using Google Places API. This reference can be used to display an image of the place.',
+    inputSchema: FindPlacePhotoInputSchema,
+    outputSchema: FindPlacePhotoOutputSchema,
+  },
+  async (input) => {
+    try {
+      // First, try to geocode the destination context to get lat/lng for better search results
+      const geocodedContext = await geocodeAddressService(input.destinationContext);
+      const query = `${input.placeName} in ${input.destinationContext}`;
+      
+      const result = await findPlacePhotoByTextSearchService(query, geocodedContext?.lat, geocodedContext?.lng);
+      return result ? { photoReference: result.photoReference } : { photoReference: null };
+    } catch (error) {
+      console.error("Error in findPlacePhotoTool:", error);
+      return { photoReference: null }; // Ensure a valid output schema structure on error
     }
   }
 );

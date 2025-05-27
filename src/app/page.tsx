@@ -8,7 +8,7 @@ import { ItineraryDisplay } from "@/components/itinerary-display";
 import { SuggestionsDisplay } from "@/components/suggestions-display";
 import { WeatherDisplay } from "@/components/weather-display";
 import { MapDisplay } from "@/components/map-display";
-import { generateItinerary, type GenerateItineraryOutput, type DayItinerary } from "@/ai/flows/generate-itinerary"; // Updated import
+import { generateItinerary, type DayItinerary } from "@/ai/flows/generate-itinerary"; 
 import { suggestPlaces, type SuggestPlacesOutput } from "@/ai/flows/suggest-places";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,7 +20,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function HomePage() {
   const [formData, setFormData] = useState<ItineraryFormValues | null>(null);
-  const [itinerary, setItinerary] = useState<DayItinerary[] | null>(null); // Changed type from string | null
+  const [itinerary, setItinerary] = useState<DayItinerary[] | null>(null); 
   const [suggestions, setSuggestions] = useState<SuggestPlacesOutput | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -40,34 +40,40 @@ export default function HomePage() {
         interests: values.interests,
       });
 
-      const budgetString = `$${values.budget}`;
+      const budgetString = `$${values.budget}`; // The suggestPlaces flow expects budget as a string
       const suggestionsPromise = suggestPlaces({
         destination: values.destination,
         budget: budgetString,
         interests: values.interests,
       });
 
+      // Execute in parallel
       const [itineraryResult, suggestionsResult] = await Promise.all([
         itineraryPromise,
         suggestionsPromise,
       ]);
       
+      // Process Itinerary
       if (itineraryResult.itinerary && itineraryResult.itinerary.length > 0) {
         setItinerary(itineraryResult.itinerary);
       } else {
-        // Handle cases where itinerary might be empty or not generated as expected
-        // even if the flow itself doesn't throw an error.
         console.warn("Itinerary generated successfully but is empty or invalid:", itineraryResult);
-        setItinerary([]); // Set to empty array to signify no itinerary items
-        // Optionally, inform the user
-        // toast({
-        //   title: "Itinerary Generation Note",
-        //   description: "The itinerary could not be fully generated for your request. Please try adjusting your inputs.",
-        //   variant: "default",
-        // });
+        setItinerary([]); 
+        toast({
+          title: "Itinerary Note",
+          description: "The AI couldn't create a detailed schedule. Try adjusting your inputs.",
+          variant: "default",
+        });
       }
       
-      setSuggestions(suggestionsResult);
+      // Process Suggestions
+      if (suggestionsResult) {
+        setSuggestions(suggestionsResult);
+      } else {
+        console.warn("Suggestions were not generated or are invalid:", suggestionsResult);
+        setSuggestions({ hotels: [], restaurants: [], activities: []}); // Ensure it's always an object
+      }
+      
 
       toast({
         title: "Plan Generated!",
@@ -77,7 +83,7 @@ export default function HomePage() {
 
     } catch (err) {
       console.error(err);
-      const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
+      const errorMessage = err instanceof Error ? err.message : "An unknown error occurred during plan generation.";
       setError(`Failed to generate plan: ${errorMessage}`);
       toast({
         title: "Error Generating Plan",
@@ -102,10 +108,10 @@ export default function HomePage() {
         scale: 2, 
         useCORS: true, 
         logging: true,
-        scrollX: 0, // Try to prevent horizontal scroll issues
-        scrollY: -window.scrollY, // Capture from the top
-        windowWidth: element.scrollWidth, // Capture full width
-        windowHeight: element.scrollHeight, // Capture full height
+        scrollX: 0, 
+        scrollY: -window.scrollY, 
+        windowWidth: element.scrollWidth, 
+        windowHeight: element.scrollHeight, 
       });
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF({
@@ -126,19 +132,18 @@ export default function HomePage() {
       const newImgHeight = imgHeight * ratio;
 
       let position = 0;
-      let heightLeft = newImgHeight;
+      let currentImgHeight = newImgHeight;
+      
+      // Add first page
+      pdf.addImage(imgData, 'PNG', (pdfWidth - newImgWidth) / 2, 0, newImgWidth, newImgHeight);
+      currentImgHeight -= pdfHeight;
 
-      if (newImgHeight <= pdfHeight) { // If image fits on one page
-        pdf.addImage(imgData, 'PNG', (pdfWidth - newImgWidth) / 2, 0, newImgWidth, newImgHeight);
-      } else { // If image is taller than one page, paginate
-         pdf.addImage(imgData, 'PNG', (pdfWidth - newImgWidth) / 2, position, newImgWidth, newImgHeight);
-         heightLeft -= pdfHeight;
-         while (heightLeft > 0) {
-            position = heightLeft - newImgHeight; // negative
-            pdf.addPage();
-            pdf.addImage(imgData, 'PNG', (pdfWidth - newImgWidth) / 2, position, newImgWidth, newImgHeight);
-            heightLeft -= pdfHeight;
-         }
+      // Add subsequent pages if needed
+      while (currentImgHeight > 0) {
+        position -= pdfHeight; // This should be negative to move the image "up" on the new page
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', (pdfWidth - newImgWidth) / 2, position, newImgWidth, newImgHeight);
+        currentImgHeight -= pdfHeight;
       }
       
       pdf.save(`WanderWise_Itinerary_${formData?.destination || 'Trip'}.pdf`);
@@ -167,6 +172,7 @@ export default function HomePage() {
                 </CardContent>
               </Card>
             )}
+            {/* Ensure suggestions is not null before rendering */}
             {suggestions && !loading && <SuggestionsDisplay suggestions={suggestions} />}
           </div>
 
@@ -180,7 +186,7 @@ export default function HomePage() {
               </Alert>
             )}
             
-            {loading && !itinerary && ( // Show skeleton while loading and no itinerary data yet
+            {loading && !itinerary && ( 
               <Card className="shadow-xl">
                 <CardHeader><CardTitle>Generating Your Itinerary...</CardTitle></CardHeader>
                 <CardContent className="space-y-4">
@@ -192,7 +198,7 @@ export default function HomePage() {
               </Card>
             )}
 
-            {itinerary && !loading && formData && ( // Itinerary data is available and not loading
+            {itinerary && !loading && formData && ( 
               <ItineraryDisplay 
                 itinerary={itinerary} 
                 destination={formData.destination} 
@@ -200,7 +206,7 @@ export default function HomePage() {
               />
             )}
             
-            {!loading && !itinerary && !error && !formData && ( // Initial state, no form submitted
+            {!loading && !itinerary && !error && !formData && ( 
                  <Card className="shadow-xl bg-primary/5 border-primary/20">
                     <CardHeader>
                         <CardTitle className="text-xl text-primary">Welcome to WanderWise!</CardTitle>
@@ -212,20 +218,20 @@ export default function HomePage() {
                 </Card>
             )}
 
-            {formData && (itinerary || loading) && ( // Form has been submitted, show map/weather
+            {formData && (itinerary || loading) && ( 
               <>
-                {(loading && (!itinerary || itinerary.length === 0)) && ( // Show skeleton for map/weather if itinerary is still primary loading focus OR itinerary came back empty
+                {(loading && (!itinerary || itinerary.length === 0)) && ( 
                   <>
                     <Skeleton className="h-[300px] w-full shadow-xl" />
-                    <Skeleton className="h-[150px] w-full shadow-xl" />
+                    <Skeleton className="h-[200px] w-full shadow-xl" /> {/* Adjusted skeleton height for weather */}
                   </>
                 )}
-                {(!loading && itinerary && itinerary.length > 0) && ( // Show map/weather once itinerary is loaded and has content
-                  <>
-                    <MapDisplay destination={formData.destination} />
-                    <WeatherDisplay location={formData.destination} />
-                  </>
-                )}
+                {/* Render MapDisplay and WeatherDisplay if formData exists, regardless of itinerary content,
+                    as they depend on formData.destination primarily.
+                    Show skeletons if loading and data isn't there yet.
+                */}
+                <MapDisplay destination={formData.destination} />
+                <WeatherDisplay location={formData.destination} />
               </>
             )}
           </div>

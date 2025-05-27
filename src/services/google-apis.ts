@@ -50,8 +50,8 @@ export interface AirQualityData {
 }
 
 export interface WeatherAndAirQualityOutput {
-  forecasts: DailyForecast[];
-  airQuality?: AirQualityData;
+  forecasts: DailyForecast[] | null; // Allow null
+  airQuality?: AirQualityData | null; // Allow null
 }
 
 export async function getWeatherForecast(lat: number, lng: number, days: number = 7): Promise<DailyForecast[] | null> {
@@ -60,7 +60,7 @@ export async function getWeatherForecast(lat: number, lng: number, days: number 
   
   try {
     const response = await fetch(url);
-    const responseText = await response.text(); // Get raw text for logging
+    const responseText = await response.text(); 
     console.log(`Google Forecast API response for lat: ${lat}, lng: ${lng}, days: ${days} - Status: ${response.status}`);
     console.log("Forecast API Raw Response Body:", responseText);
 
@@ -72,7 +72,8 @@ export async function getWeatherForecast(lat: number, lng: number, days: number 
         errorData = { error: { message: `Failed to parse error response: ${responseText}` }};
       }
       console.error('Google Forecast API Error:', response.status, errorData);
-      throw new Error(`Forecast API request failed: ${errorData.error?.message || response.statusText}`);
+      // Do not throw here, allow the flow to return partial data or an error message
+      return null;
     }
     
     const data = JSON.parse(responseText);
@@ -91,7 +92,8 @@ export async function getWeatherForecast(lat: number, lng: number, days: number 
     return null;
   } catch (error) {
     console.error('Error fetching or processing weather forecast data:', error);
-    throw error;
+    // Do not throw here, allow the flow to return partial data or an error message
+    return null;
   }
 }
 
@@ -119,7 +121,8 @@ export async function getCurrentAirQuality(lat: number, lng: number): Promise<Ai
         errorData = { error: { message: `Failed to parse error response: ${responseText}`}};
       }
       console.error('Google Air Quality API Error:', response.status, errorData);
-      throw new Error(`Air Quality API request failed: ${errorData.error?.message || response.statusText}`);
+      // Do not throw here, allow the flow to return partial data or an error message
+      return null;
     }
     const data = JSON.parse(responseText);
     console.log("Parsed Air Quality API Data:", JSON.stringify(data, null, 2));
@@ -138,6 +141,40 @@ export async function getCurrentAirQuality(lat: number, lng: number): Promise<Ai
     return null;
   } catch (error) {
     console.error('Error fetching or processing air quality data:', error);
-    throw error;
+     // Do not throw here, allow the flow to return partial data or an error message
+    return null;
+  }
+}
+
+export interface PlacePhotoReference {
+  photoReference: string | null;
+}
+
+export async function findPlacePhotoByTextSearch(query: string, lat?: number, lng?: number): Promise<PlacePhotoReference | null> {
+  if (!API_KEY) throw new Error('GOOGLE_API_KEY is not configured.');
+  
+  let url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&key=${API_KEY}`;
+  if (lat && lng) {
+    url += `&location=${lat}%2C${lng}&radius=50000`; // Add location bias if lat/lng provided
+  }
+  
+  console.log("Google Places Text Search URL:", url);
+
+  try {
+    const response = await fetch(url);
+    const data = await response.json();
+    console.log("Places Text Search API response for query:", query, JSON.stringify(data, null, 2));
+
+    if (data.status === 'OK' && data.results && data.results.length > 0) {
+      const place = data.results[0];
+      if (place.photos && place.photos.length > 0) {
+        return { photoReference: place.photos[0].photo_reference };
+      }
+    }
+    console.warn('No photo reference found for query:', query, 'Status:', data.status, 'Error:', data.error_message);
+    return { photoReference: null };
+  } catch (error) {
+    console.error('Error fetching place photo data:', error);
+    return null; // Return null or an object indicating error, rather than throwing
   }
 }
