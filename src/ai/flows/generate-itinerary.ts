@@ -1,4 +1,5 @@
-// use server'
+
+'use server';
 
 /**
  * @fileOverview Generates a personalized trip itinerary based on destination, budget, and interests.

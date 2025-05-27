@@ -10,6 +10,7 @@ import { MapDisplay } from "@/components/map-display";
 import { generateItinerary, type GenerateItineraryOutput } from "@/ai/flows/generate-itinerary";
 import { suggestPlaces, type SuggestPlacesOutput } from "@/ai/flows/suggest-places";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Terminal } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import jsPDF from 'jspdf';
