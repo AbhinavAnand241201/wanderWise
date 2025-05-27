@@ -2,7 +2,7 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Cloud, CloudSun, CloudRain, CloudSnow, Sun, Wind, Thermometer, AlertTriangle, Leaf, CloudFog, CloudDrizzle, CloudLightning, Cloudy, Waves, Sunrise, Sunset } from "lucide-react";
+import { CloudSun, CloudRain, CloudSnow, Sun, Wind, Thermometer, AlertTriangle, Leaf, CloudFog, CloudDrizzle, CloudLightning, Cloudy, CalendarDays, Sunrise } from "lucide-react";
 import type { GetWeatherAndAirQualityOutput, GetWeatherAndAirQualityInput } from "@/ai/flows/get-weather-and-air-quality";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useEffect, useState } from "react";
@@ -10,13 +10,13 @@ import { getWeatherAndAirQuality } from "@/ai/flows/get-weather-and-air-quality"
 
 
 interface WeatherDisplayProps {
-  location: string; 
+  location: string;
   onWeatherDataFetched?: (data: GetWeatherAndAirQualityOutput | null) => void;
 }
 
 const getWeatherIcon = (iconCode?: string, condition?: string): React.ReactElement => {
   const lowerCondition = condition?.toLowerCase() || "";
-  
+
   // Prioritize iconCode if available and mapped
   if (iconCode) {
     if (iconCode.includes("clear") || iconCode.includes("sunny")) return <Sun className="h-10 w-10 text-yellow-400" />;
@@ -40,8 +40,8 @@ const getWeatherIcon = (iconCode?: string, condition?: string): React.ReactEleme
   if (lowerCondition.includes("snow") || lowerCondition.includes("flurries")) return <CloudSnow className="h-10 w-10 text-blue-200" />;
   if (lowerCondition.includes("fog") || lowerCondition.includes("mist")) return <CloudFog className="h-10 w-10 text-gray-400" />;
   if (lowerCondition.includes("windy")) return <Wind className="h-10 w-10 text-slate-500" />;
-  
-  return <Thermometer className="h-10 w-10 text-slate-600" />; 
+
+  return <Thermometer className="h-10 w-10 text-slate-600" />;
 };
 
 
@@ -55,8 +55,8 @@ export function WeatherDisplay({ location, onWeatherDataFetched }: WeatherDispla
       setLoading(true);
       setError(null);
       setData(null);
-      if (onWeatherDataFetched) onWeatherDataFetched(null); 
-      
+      if (onWeatherDataFetched) onWeatherDataFetched(null);
+
       const input: GetWeatherAndAirQualityInput = { destination: location, days: 7 };
       getWeatherAndAirQuality(input)
         .then(response => {
@@ -77,10 +77,10 @@ export function WeatherDisplay({ location, onWeatherDataFetched }: WeatherDispla
         });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location]); 
+  }, [location]);
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString + 'T00:00:00'); 
+    const date = new Date(dateString + 'T00:00:00');
     return date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
   };
 
@@ -90,7 +90,7 @@ export function WeatherDisplay({ location, onWeatherDataFetched }: WeatherDispla
     if (aqi <= 150) return "bg-orange-500/80 text-white"; // Unhealthy for Sensitive Groups
     if (aqi <= 200) return "bg-red-500/80 text-white"; // Unhealthy
     if (aqi <= 300) return "bg-purple-600/80 text-white"; // Very Unhealthy
-    return "bg-maroon-700/80 text-white"; // Hazardous (Note: maroon might not be a default tailwind color)
+    return "bg-maroon-700/80 text-white"; // Hazardous
   };
 
 
@@ -105,16 +105,16 @@ export function WeatherDisplay({ location, onWeatherDataFetched }: WeatherDispla
       <CardContent className="pt-6">
         {loading && (
           <div className="space-y-6">
-            <Skeleton className="h-12 w-3/4 rounded-lg" />
-            <Skeleton className="h-8 w-1/2 rounded-md" />
+            <Skeleton className="h-12 w-3/4 rounded-lg bg-muted/70" />
+            <Skeleton className="h-8 w-1/2 rounded-md bg-muted/70" />
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-              {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-32 w-full rounded-xl" />)}
+              {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-32 w-full rounded-xl bg-muted/70" />)}
             </div>
-             <Skeleton className="h-20 w-full rounded-lg mt-4" />
+             <Skeleton className="h-20 w-full rounded-lg mt-4 bg-muted/70" />
           </div>
         )}
         {error && !loading && !data?.forecasts && !data?.airQuality && <p className="text-destructive text-lg flex items-center gap-2"><AlertTriangle className="inline h-6 w-6" />{error}</p>}
-        
+
         {data && !loading && (
           <div className="space-y-8">
             {data.forecasts && data.forecasts.length > 0 && (
@@ -133,10 +133,10 @@ export function WeatherDisplay({ location, onWeatherDataFetched }: WeatherDispla
               </div>
             )}
 
-            {data.forecasts && data.forecasts.length > 1 && ( // Show 7-day if more than today's forecast
+            {data.forecasts && data.forecasts.length > 1 && (
               <div>
                 <h3 className="text-xl font-semibold mb-4 text-primary flex items-center gap-2"><CalendarDays className="text-accent"/> 7-Day Forecast</h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7 gap-3">
                   {data.forecasts.map((day, index) => (
                     <div key={index} className="p-3 border border-border rounded-xl bg-card/80 hover:shadow-xl hover:border-accent/50 transition-all duration-300 transform hover:scale-105 flex flex-col items-center text-center shadow-md">
                       <p className="font-semibold text-sm text-primary">{formatDate(day.date)}</p>
@@ -151,7 +151,7 @@ export function WeatherDisplay({ location, onWeatherDataFetched }: WeatherDispla
                 </div>
               </div>
             )}
-            
+
             {data.airQuality && (
               <div>
                 <h3 className="text-xl font-semibold mb-3 text-primary flex items-center gap-2"><Leaf className="text-green-500"/> Air Quality</h3>
@@ -168,8 +168,8 @@ export function WeatherDisplay({ location, onWeatherDataFetched }: WeatherDispla
                 </div>
               </div>
             )}
-            
-            {data.error && (!data.forecasts || data.forecasts.length === 0) && (!data.airQuality) && ( // Show only if there's an error AND no data at all
+
+            {data.error && (!data.forecasts || data.forecasts.length === 0) && (!data.airQuality) && (
                 <p className="text-destructive text-lg flex items-center gap-2"><AlertTriangle className="inline h-6 w-6" />{data.error}</p>
             )}
 
