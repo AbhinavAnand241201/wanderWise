@@ -7,7 +7,7 @@ import { ItineraryForm, type ItineraryFormValues } from "@/components/itinerary-
 import { ItineraryDisplay } from "@/components/itinerary-display";
 import { SuggestionsDisplay } from "@/components/suggestions-display";
 import { WeatherDisplay } from "@/components/weather-display";
-import { MapDisplay } from "@/components/map-display";
+import { MapDisplayWrapper } from "@/components/map-display"; // Changed import
 import { generateItinerary, type DayItinerary } from "@/ai/flows/generate-itinerary"; 
 import { suggestPlaces, type SuggestPlacesOutput } from "@/ai/flows/suggest-places";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -32,7 +32,7 @@ export default function HomePage() {
     setError(null);
     setItinerary(null);
     setSuggestions(null);
-    setCurrentRoutePolyline(null); // Clear previous route
+    setCurrentRoutePolyline(null); 
     setFormData(values);
 
     try {
@@ -224,7 +224,7 @@ export default function HomePage() {
                     <Skeleton className="h-[200px] w-full shadow-xl" />
                   </>
                 )}
-                <MapDisplay 
+                <MapDisplayWrapper 
                   destination={formData.destination} 
                   routePolyline={currentRoutePolyline} 
                 />
