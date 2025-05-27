@@ -99,12 +99,19 @@ export default function HomePage() {
       });
 
     } catch (err) {
-      console.error(err);
-      const errorMessage = err instanceof Error ? err.message : "An unknown error occurred during plan generation.";
-      setError(`Failed to generate plan: ${errorMessage}`);
+      console.error("Error during plan generation:", err); // Log the full error for server-side debugging
+      let displayMessage = "An unknown error occurred while generating your plan.";
+      if (err instanceof Error) {
+        if (err.message.includes("Server Components render") || err.message.includes("Cannot read properties of null (reading 'text')") ) { // Common Genkit error if API fails
+          displayMessage = "Failed to generate plan due to a server-side issue. Please ensure API keys and configurations are correctly set up in your deployment environment.";
+        } else {
+          displayMessage = `Failed to generate plan: ${err.message}`;
+        }
+      }
+      setError(displayMessage);
       toast({
         title: "Error Generating Plan",
-        description: errorMessage,
+        description: displayMessage,
         variant: "destructive",
       });
     } finally {
@@ -181,7 +188,6 @@ export default function HomePage() {
       const accordions = element.querySelectorAll('div[data-state="closed"]');
       accordions.forEach(acc => (acc as HTMLElement).setAttribute('data-state', 'open'));
       
-      // Ensure all images are loaded before capturing
       const images = Array.from(element.querySelectorAll('img'));
       await Promise.all(
         images.map(img => {
@@ -192,7 +198,7 @@ export default function HomePage() {
         })
       );
       
-      await new Promise(resolve => setTimeout(resolve, 500)); // Increased delay for rendering complex elements
+      await new Promise(resolve => setTimeout(resolve, 500)); 
 
       const canvas = await html2canvas(element, {
         scale: 1.5, 
@@ -202,16 +208,16 @@ export default function HomePage() {
         scrollY: -window.scrollY, 
         windowWidth: element.scrollWidth,
         windowHeight: element.scrollHeight,
-        removeContainer: true, // Clean up container after capture
+        removeContainer: true, 
       });
 
       accordions.forEach(acc => (acc as HTMLElement).setAttribute('data-state', 'closed'));
 
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF({
-        orientation: 'p', // portrait
-        unit: 'pt', // points
-        format: 'a4', // A4 page size
+        orientation: 'p', 
+        unit: 'pt', 
+        format: 'a4', 
         putOnlyUsedFonts: true,
         compress: true,
       });
@@ -220,34 +226,38 @@ export default function HomePage() {
       const pdfHeight = pdf.internal.pageSize.getHeight();
       
       const imgProps = pdf.getImageProperties(imgData);
-      const imgWidth = imgProps.width;
-      const imgHeight = imgProps.height;
+      const canvasWidth = imgProps.width;
+      const canvasHeight = imgProps.height;
 
-      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+      const ratio = canvasWidth / pdfWidth;
+      const scaledCanvasHeight = canvasHeight / ratio;
       
-      const effectiveImgWidth = imgWidth * ratio;
-      const effectiveImgHeight = imgHeight * ratio;
-      
-      const totalPages = Math.ceil(imgHeight / (pdfHeight/ratio) );
+      let yPosition = 0;
+      let pageCount = 0;
 
-      for (let i = 0; i < totalPages; i++) {
-        if (i > 0) pdf.addPage();
-        // Calculate Y offset for the current page's portion of the image
-        const sourceY = i * (pdfHeight / ratio); // Y position in the source canvas
+      while(yPosition < scaledCanvasHeight) {
+        if (pageCount > 0) pdf.addPage();
         
-        pdf.addImage(
-            imgData, 
-            'PNG', 
-            (pdfWidth - effectiveImgWidth) / 2, // Center the image horizontally
-            0, // Start at the top of the PDF page
-            effectiveImgWidth, 
-            effectiveImgHeight,
-            undefined, // alias
-            'FAST', // compression
-            0, // rotation
-            0, // xOffset (in image) - not needed when using sourceY for cropping
-            -sourceY // yOffset (in image) - negative to crop from top of image
-        );
+        const pageCanvasHeight = Math.min(pdfHeight, scaledCanvasHeight - yPosition);
+        const sourceY = yPosition * ratio;
+        const sourceHeight = pageCanvasHeight * ratio;
+
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = canvasWidth;
+        tempCanvas.height = sourceHeight;
+        const tempCtx = tempCanvas.getContext('2d');
+        if (tempCtx) {
+            tempCtx.drawImage(canvas, 0, sourceY, canvasWidth, sourceHeight, 0, 0, canvasWidth, sourceHeight);
+            const pageImgData = tempCanvas.toDataURL('image/png');
+            pdf.addImage(pageImgData, 'PNG', 0, 0, pdfWidth, pageCanvasHeight);
+        }
+        
+        yPosition += pageCanvasHeight;
+        pageCount++;
+        if (pageCount > 20) { // Safety break for very long content
+            console.warn("PDF export exceeded 20 pages, stopping.");
+            break;
+        }
       }
 
       pdf.save(`WanderWise_Itinerary_${formData?.destination.replace(/[^a-zA-Z0-9]/g, '_') || 'Trip'}.pdf`);
@@ -379,5 +389,4 @@ export default function HomePage() {
     </div>
   );
 }
-
     
