@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useRef } from "react";
@@ -7,7 +8,7 @@ import { ItineraryDisplay } from "@/components/itinerary-display";
 import { SuggestionsDisplay } from "@/components/suggestions-display";
 import { WeatherDisplay } from "@/components/weather-display";
 import { MapDisplay } from "@/components/map-display";
-import { generateItinerary, type GenerateItineraryOutput } from "@/ai/flows/generate-itinerary";
+import { generateItinerary, type GenerateItineraryOutput, type DayItinerary } from "@/ai/flows/generate-itinerary"; // Updated import
 import { suggestPlaces, type SuggestPlacesOutput } from "@/ai/flows/suggest-places";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,7 +20,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function HomePage() {
   const [formData, setFormData] = useState<ItineraryFormValues | null>(null);
-  const [itinerary, setItinerary] = useState<string | null>(null);
+  const [itinerary, setItinerary] = useState<DayItinerary[] | null>(null); // Changed type from string | null
   const [suggestions, setSuggestions] = useState<SuggestPlacesOutput | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -51,10 +52,19 @@ export default function HomePage() {
         suggestionsPromise,
       ]);
       
-      if (itineraryResult.itinerary) {
+      if (itineraryResult.itinerary && itineraryResult.itinerary.length > 0) {
         setItinerary(itineraryResult.itinerary);
       } else {
-        throw new Error("Failed to generate itinerary content.");
+        // Handle cases where itinerary might be empty or not generated as expected
+        // even if the flow itself doesn't throw an error.
+        console.warn("Itinerary generated successfully but is empty or invalid:", itineraryResult);
+        setItinerary([]); // Set to empty array to signify no itinerary items
+        // Optionally, inform the user
+        // toast({
+        //   title: "Itinerary Generation Note",
+        //   description: "The itinerary could not be fully generated for your request. Please try adjusting your inputs.",
+        //   variant: "default",
+        // });
       }
       
       setSuggestions(suggestionsResult);
@@ -89,9 +99,13 @@ export default function HomePage() {
 
     try {
       const canvas = await html2canvas(element, {
-        scale: 2, // Improves quality
-        useCORS: true, // For images from other domains if any
+        scale: 2, 
+        useCORS: true, 
         logging: true,
+        scrollX: 0, // Try to prevent horizontal scroll issues
+        scrollY: -window.scrollY, // Capture from the top
+        windowWidth: element.scrollWidth, // Capture full width
+        windowHeight: element.scrollHeight, // Capture full height
       });
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF({
@@ -102,14 +116,31 @@ export default function HomePage() {
 
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
-      const imgWidth = canvas.width;
-      const imgHeight = canvas.height;
+      
+      const imgProps = pdf.getImageProperties(imgData);
+      const imgWidth = imgProps.width;
+      const imgHeight = imgProps.height;
+      
       const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
-      const imgX = (pdfWidth - imgWidth * ratio) / 2;
-      // const imgY = (pdfHeight - imgHeight * ratio) / 2; // center vertically
-      const imgY = 0; // align top
+      const newImgWidth = imgWidth * ratio;
+      const newImgHeight = imgHeight * ratio;
 
-      pdf.addImage(imgData, 'PNG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
+      let position = 0;
+      let heightLeft = newImgHeight;
+
+      if (newImgHeight <= pdfHeight) { // If image fits on one page
+        pdf.addImage(imgData, 'PNG', (pdfWidth - newImgWidth) / 2, 0, newImgWidth, newImgHeight);
+      } else { // If image is taller than one page, paginate
+         pdf.addImage(imgData, 'PNG', (pdfWidth - newImgWidth) / 2, position, newImgWidth, newImgHeight);
+         heightLeft -= pdfHeight;
+         while (heightLeft > 0) {
+            position = heightLeft - newImgHeight; // negative
+            pdf.addPage();
+            pdf.addImage(imgData, 'PNG', (pdfWidth - newImgWidth) / 2, position, newImgWidth, newImgHeight);
+            heightLeft -= pdfHeight;
+         }
+      }
+      
       pdf.save(`WanderWise_Itinerary_${formData?.destination || 'Trip'}.pdf`);
       toast({ title: "PDF Exported!", description: "Your itinerary has been saved as a PDF." });
     } catch (e) {
@@ -149,7 +180,7 @@ export default function HomePage() {
               </Alert>
             )}
             
-            {loading && !itinerary && (
+            {loading && !itinerary && ( // Show skeleton while loading and no itinerary data yet
               <Card className="shadow-xl">
                 <CardHeader><CardTitle>Generating Your Itinerary...</CardTitle></CardHeader>
                 <CardContent className="space-y-4">
@@ -161,7 +192,7 @@ export default function HomePage() {
               </Card>
             )}
 
-            {itinerary && !loading && formData && (
+            {itinerary && !loading && formData && ( // Itinerary data is available and not loading
               <ItineraryDisplay 
                 itinerary={itinerary} 
                 destination={formData.destination} 
@@ -169,7 +200,7 @@ export default function HomePage() {
               />
             )}
             
-            {!loading && !itinerary && !error && !formData && (
+            {!loading && !itinerary && !error && !formData && ( // Initial state, no form submitted
                  <Card className="shadow-xl bg-primary/5 border-primary/20">
                     <CardHeader>
                         <CardTitle className="text-xl text-primary">Welcome to WanderWise!</CardTitle>
@@ -181,15 +212,15 @@ export default function HomePage() {
                 </Card>
             )}
 
-            {formData && (itinerary || loading) && (
+            {formData && (itinerary || loading) && ( // Form has been submitted, show map/weather
               <>
-                {loading && !itinerary && ( // Show skeleton for map/weather while itinerary is primary loading focus
+                {(loading && (!itinerary || itinerary.length === 0)) && ( // Show skeleton for map/weather if itinerary is still primary loading focus OR itinerary came back empty
                   <>
                     <Skeleton className="h-[300px] w-full shadow-xl" />
                     <Skeleton className="h-[150px] w-full shadow-xl" />
                   </>
                 )}
-                {!loading && itinerary && ( // Show map/weather once itinerary is loaded
+                {(!loading && itinerary && itinerary.length > 0) && ( // Show map/weather once itinerary is loaded and has content
                   <>
                     <MapDisplay destination={formData.destination} />
                     <WeatherDisplay location={formData.destination} />

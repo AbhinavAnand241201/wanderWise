@@ -4,125 +4,66 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { CalendarDays, FileDown, Clock, DollarSignIcon } from "lucide-react";
+import { CalendarDays, FileDown, Clock, DollarSignIcon, ListChecks, Tag, StickyNote, Briefcase, MapPin } from "lucide-react";
 import React, { useRef } from 'react';
+import type { DayItinerary, Activity } from "@/ai/flows/generate-itinerary"; // Import structured types
 
 interface ItineraryDisplayProps {
-  itinerary: string;
+  itinerary: DayItinerary[]; // Expecting an array of structured DayItinerary objects
   destination: string;
   onExportPDF: (element: HTMLElement | null) => void;
 }
 
-interface StructuredDay {
-  day?: number | string;
-  title?: string;
-  description?: string;
-  content?: string; // General catch-all for main text
-  activities?: string[] | string; // Could be an array of strings or a single multi-line string
-  estimatedCost?: string;
-  travelTime?: string;
-  [key: string]: any; // Allow other properties from the AI
-}
-
-// Renamed original parseItinerary to use as a fallback for purely text-based itineraries
-const parseTextAsFallback = (itineraryString: string): Array<{ title: string; content: string }> => {
-  const dayRegex = /Day\s*\d+:/gi;
-  let days: Array<{ title: string; content: string; startIndex?: number }> = [];
-  let lastIndex = 0;
-  let match;
-
-  // This loop structure is from your original parseItinerary function
-  while ((match = dayRegex.exec(itineraryString)) !== null) {
-    if (days.length > 0 && days[days.length-1].startIndex !== undefined) {
-       // Assign content to the *previous* day block
-       days[days.length-1].content = itineraryString.substring(days[days.length-1].startIndex!, match.index)
-                                        .replace(new RegExp(`^${days[days.length-1].title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*`, 'i'), '') // Remove title from start of content
-                                        .trim();
-    } else if (lastIndex === 0 && match.index > 0) {
-      // Content before the first "Day X:", treat as an introduction
-      const introContent = itineraryString.substring(0, match.index).trim();
-      if (introContent) {
-        days.push({ title: "Trip Introduction", content: introContent });
-      }
-    }
-    // Add new day entry
-    days.push({ title: match[0], content: "", startIndex: match.index + match[0].length });
-    lastIndex = match.index + match[0].length;
-  }
-  
-  if (days.length > 0 && days[days.length-1].startIndex !== undefined) {
-    // Assign content for the *last* day block
-    days[days.length-1].content = itineraryString.substring(days[days.length-1].startIndex!)
-                                   .replace(new RegExp(`^${days[days.length-1].title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*`, 'i'), '')
-                                   .trim();
-  } else if (itineraryString && days.length === 0) { // No "Day X:" found at all
-    days.push({ title: "Trip Overview", content: itineraryString.trim() });
-  }
-  
-  return days.filter(day => day.content.trim() !== "");
-};
-
-
 export function ItineraryDisplay({ itinerary, destination, onExportPDF }: ItineraryDisplayProps) {
   const itineraryContentRef = useRef<HTMLDivElement>(null);
 
-  const processItineraryString = (itineraryStr: string): Array<{ title: string; content: string }> => {
-    try {
-      const parsedJson = JSON.parse(itineraryStr);
-      if (Array.isArray(parsedJson) && parsedJson.length > 0 && typeof parsedJson[0] === 'object') {
-        // It's likely an array of structured day objects
-        return parsedJson.map((item: StructuredDay, index: number) => {
-          let dayTitle = item.title || (item.day ? `Day ${item.day}` : `Day ${index + 1}`);
-          let dayContent = item.description || item.content || '';
+  const renderActivity = (activity: Activity, activityIndex: number) => (
+    <div key={activityIndex} className="mb-3 p-3 border-l-2 border-accent/50 bg-background rounded-r-md shadow-sm">
+      {activity.time && <p className="text-sm font-semibold text-primary flex items-center gap-1"><Clock size={14} /> {activity.time}</p>}
+      <p className="my-1">{activity.description}</p>
+      <div className="text-xs text-muted-foreground space-y-0.5">
+        {activity.duration && <p><Briefcase size={12} className="inline mr-1" /> Duration: {activity.duration}</p>}
+        {activity.cost && <p><DollarSignIcon size={12} className="inline mr-1 text-green-600" /> Cost: {activity.cost}</p>}
+        {activity.notes && <p><StickyNote size={12} className="inline mr-1" /> Notes: {activity.notes}</p>}
+      </div>
+    </div>
+  );
 
-          if (Array.isArray(item.activities)) {
-            dayContent += (dayContent ? '\n\nActivities:\n' : 'Activities:\n') + item.activities.map(act => `- ${act}`).join('\n');
-          } else if (typeof item.activities === 'string') {
-            dayContent += (dayContent ? '\n\nActivities:\n' : 'Activities:\n') + item.activities;
-          }
-          
-          // Append other properties if they exist and weren't covered
-          const knownProps = ['day', 'title', 'description', 'content', 'activities', 'estimatedCost', 'travelTime'];
-          for (const key in item) {
-            if (!knownProps.includes(key) && item[key]) {
-              dayContent += `\n${key.charAt(0).toUpperCase() + key.slice(1)}: ${item[key]}`;
-            }
-          }
-          if (item.estimatedCost) dayContent += `\nEstimated Cost: ${item.estimatedCost}`;
-          if (item.travelTime) dayContent += `\nTravel Time: ${item.travelTime}`;
+  const renderDay = (dayData: DayItinerary, dayIndex: number) => {
+    const dayTitle = typeof dayData.day === 'number' ? `Day ${dayData.day}` : dayData.day;
+    
+    return (
+      <AccordionItem value={dayTitle || `day-${dayIndex}`} key={dayIndex}>
+        <AccordionTrigger className="text-lg font-semibold hover:text-primary transition-colors">
+          {dayTitle} {dayData.theme && <span className="text-sm text-muted-foreground ml-2 font-normal">- {dayData.theme}</span>}
+        </AccordionTrigger>
+        <AccordionContent className="prose prose-sm max-w-none dark:prose-invert">
+          <div className="space-y-3 p-2 bg-muted/30 rounded-md">
+            {dayData.summary && (
+              <p className="italic text-muted-foreground mb-3 border-b pb-2">{dayData.summary}</p>
+            )}
+            
+            {dayData.activities && dayData.activities.length > 0 && (
+              <div>
+                <h4 className="text-md font-semibold mb-2 text-primary/80 flex items-center gap-1"><ListChecks size={18}/> Activities:</h4>
+                {dayData.activities.map(renderActivity)}
+              </div>
+            )}
 
-          return { title: dayTitle, content: dayContent.trim() };
-        });
-      }
-    } catch (e) {
-      // Not JSON or not the expected array format, fall back to text parsing
-    }
-    // Fallback to original text parsing logic
-    return parseTextAsFallback(itineraryStr);
-  };
-
-  const parsedDays = processItineraryString(itinerary);
-
-  const enhanceContent = (content: string) => {
-    return content.split('\n').map((line, index) => {
-      if (line.toLowerCase().includes('travel time:')) {
-        return <p key={index} className="flex items-center gap-1 text-sm text-muted-foreground"><Clock size={14} /> {line}</p>;
-      }
-      if (line.toLowerCase().includes('estimated cost:') || line.toLowerCase().includes('budget:')) {
-        return <p key={index} className="flex items-center gap-1 text-sm text-green-600 font-medium"><DollarSignIcon size={14} /> {line}</p>;
-      }
-      // Make headings (lines ending with ':') bold
-      if (line.trim().endsWith(':') && line.length < 80) { // Heuristic for headings
-        return <p key={index} className="text-base font-semibold mt-2 mb-1">{line}</p>;
-      }
-      if (line.match(/^\s*-\s/) || line.match(/^\s*\*\s/)) {
-        return <li key={index} className="ml-4 list-disc text-base">{line.replace(/^\s*[-\*]\s*/, '')}</li>;
-      }
-      if (line.trim().length === 0) {
-        return <br key={index} />;
-      }
-      return <p key={index} className="text-base mb-1">{line}</p>;
-    });
+            {dayData.estimatedDayCost && (
+              <p className="text-sm font-medium flex items-center gap-1 mt-3 pt-2 border-t">
+                <DollarSignIcon size={16} className="text-green-700" /> Estimated Cost for Day: {dayData.estimatedDayCost}
+              </p>
+            )}
+            {dayData.travelNotes && (
+              <p className="text-sm text-muted-foreground flex items-center gap-1">
+                <MapPin size={16} /> Travel Notes: {dayData.travelNotes}
+              </p>
+            )}
+          </div>
+        </AccordionContent>
+      </AccordionItem>
+    );
   };
 
   return (
@@ -140,29 +81,14 @@ export function ItineraryDisplay({ itinerary, destination, onExportPDF }: Itiner
         </Button>
       </CardHeader>
       <CardContent>
-        {parsedDays.length > 0 ? (
-          <Accordion type="single" collapsible defaultValue={parsedDays[0]?.title} className="w-full">
-            {parsedDays.map((day, index) => (
-              day.title && day.content ? (
-                <AccordionItem value={day.title} key={index}>
-                  <AccordionTrigger className="text-lg font-semibold hover:text-primary transition-colors">
-                    {day.title}
-                  </AccordionTrigger>
-                  <AccordionContent className="prose prose-sm max-w-none dark:prose-invert">
-                    <div className="space-y-2 p-2 bg-muted/30 rounded-md">
-                       {enhanceContent(day.content)}
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-              ) : null
-            ))}
+        {itinerary && itinerary.length > 0 ? (
+          <Accordion type="single" collapsible defaultValue={(typeof itinerary[0]?.day === 'number' ? `Day ${itinerary[0]?.day}` : itinerary[0]?.day) || `day-0`} className="w-full">
+            {itinerary.map(renderDay)}
           </Accordion>
         ) : (
-          <p className="text-muted-foreground">Your itinerary details will appear here once generated.</p>
+          <p className="text-muted-foreground py-4 text-center">Your detailed itinerary will appear here once generated. If you've already generated a plan and see this, the AI might not have been able to create a detailed schedule for your request.</p>
         )}
       </CardContent>
     </Card>
   );
 }
-
-    
