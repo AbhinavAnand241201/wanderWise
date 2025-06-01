@@ -1,6 +1,7 @@
 
 import { Wand2 } from 'lucide-react';
 import Link from 'next/link';
+import { ThemeToggle } from '@/components/theme-toggle'; // Added
 
 export function AppHeader() {
   return (
@@ -10,7 +11,7 @@ export function AppHeader() {
           <Wand2 size={32} className="transform group-hover:rotate-12 transition-transform duration-300" />
           <span className="drop-shadow-sm">WanderWise</span>
         </Link>
-        {/* Future navigation items can go here */}
+        <ThemeToggle /> {/* Added ThemeToggle button */}
       </div>
     </header>
   );
