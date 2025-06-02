@@ -16,7 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { DollarSign, MapPin, Sparkles, Loader2, Briefcase /* Replaced Sparkles with Briefcase for budget */ } from "lucide-react";
+import { DollarSign, MapPin, Sparkles, Loader2, Briefcase } from "lucide-react";
 
 const formSchema = z.object({
   destination: z.string().min(2, {
@@ -68,7 +68,7 @@ export function ItineraryForm({ onSubmit, loading }: ItineraryFormProps) {
                     <MapPin className="h-5 w-5 text-primary" /> Destination
                   </FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., Kyoto, Japan" {...field} className="text-base py-5 bg-background border-border focus:border-primary focus:ring-primary/50 shadow-sm"/>
+                    <Input placeholder="e.g., Kyoto, Japan" {...field} className="text-sm py-5 bg-background border-border focus:border-primary focus:ring-primary/50 shadow-sm"/>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -83,7 +83,7 @@ export function ItineraryForm({ onSubmit, loading }: ItineraryFormProps) {
                     <DollarSign className="h-5 w-5 text-primary" /> Budget (USD)
                   </FormLabel>
                   <FormControl>
-                    <Input type="number" placeholder="e.g., 2000" {...field} className="text-base py-5 bg-background border-border focus:border-primary focus:ring-primary/50 shadow-sm"/>
+                    <Input type="number" placeholder="e.g., 2000" {...field} className="text-sm py-5 bg-background border-border focus:border-primary focus:ring-primary/50 shadow-sm"/>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -101,7 +101,7 @@ export function ItineraryForm({ onSubmit, loading }: ItineraryFormProps) {
                     <Textarea
                       placeholder="e.g., temples, ramen tasting, bullet train, traditional markets"
                       {...field}
-                      className="text-base min-h-[120px] bg-background border-border focus:border-primary focus:ring-primary/50 shadow-sm"
+                      className="text-sm min-h-[120px] bg-background border-border focus:border-primary focus:ring-primary/50 shadow-sm"
                     />
                   </FormControl>
                   <FormMessage />
@@ -111,7 +111,7 @@ export function ItineraryForm({ onSubmit, loading }: ItineraryFormProps) {
             <Button 
               type="submit" 
               disabled={loading} 
-              className="w-full text-lg py-6 font-bold bg-gradient-to-r from-primary to-accent text-primary-foreground hover:opacity-90 transition-opacity duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
+              className="w-full text-lg py-6 font-bold bg-primary text-primary-foreground hover:bg-primary/90 transition-opacity duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
             >
               {loading ? (
                 <>

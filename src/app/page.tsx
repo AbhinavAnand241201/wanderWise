@@ -21,6 +21,8 @@ import html2canvas from 'html2canvas';
 import { Skeleton } from "@/components/ui/skeleton";
 import type { GetWeatherAndAirQualityOutput } from "@/ai/flows/get-weather-and-air-quality";
 import Link from "next/link";
+import { Button } from "@/components/ui/button"; // Added Button import
+import { Loader2 } from "lucide-react"; // Added Loader2 import
 
 export default function HomePage() {
   const [formData, setFormData] = useState<ItineraryFormValues | null>(null);
@@ -325,7 +327,7 @@ export default function HomePage() {
             )}
 
             {!loading && !itinerary && !error && !formData && (
-                 <Card className="shadow-2xl bg-gradient-to-tr from-primary/90 via-primary to-accent/90 text-primary-foreground border-none transition-all hover:shadow-primary/40 hover:shadow-2xl">
+                 <Card className="shadow-2xl bg-primary text-primary-foreground border-none transition-all hover:shadow-primary/40 hover:shadow-2xl">
                     <CardHeader className="pb-3">
                         <CardTitle className="text-3xl font-extrabold flex items-center gap-2.5 drop-shadow-md">
                           <CalendarDays size={36} className="text-accent"/> Welcome to WanderWise!
