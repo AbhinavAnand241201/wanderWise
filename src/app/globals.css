@@ -64,7 +64,7 @@
     --popover: 240 10% 8%; /* Darker Popover */
     --popover-foreground: 0 0% 95%; /* Light Gray */
 
-    --primary: 330 90% 55%; /* Radiant Bright Pink/Magenta - Less Bright */
+    --primary: 330 70% 60%; /* Softer Pink/Magenta */
     --primary-foreground: 0 0% 10%; /* Dark text for contrast on bright pink */
 
     --secondary: 270 60% 60%; /* Purple - remains secondary */
@@ -81,9 +81,9 @@
 
     --border: 240 10% 20%; /* Darker Border */
     --input: 240 10% 18%; /* Dark Input Background */
-    --ring: 330 80% 60%; /* Bright Pink for focus rings - Less Bright */
+    --ring: 330 70% 65%; /* Softer Pink for focus rings */
 
-    --chart-1: 330 90% 55%; /* New Primary color - Pink - Less Bright */
+    --chart-1: 330 70% 60%; /* Softer Pink */
     --chart-2: 240 65% 65%; /* New Accent color - Indigo */
     --chart-3: 270 60% 60%; /* Secondary color - Purple */
     --chart-4: 190 70% 55%; /* A Teal/Cyan for variation */
@@ -92,12 +92,12 @@
     /* Sidebar dark colors based on new theme */
     --sidebar-background: 0 0% 8%;
     --sidebar-foreground: 0 0% 90%;
-    --sidebar-primary: 330 90% 55%; /* Radiant Pink - Less Bright */
+    --sidebar-primary: 330 70% 60%; /* Softer Pink */
     --sidebar-primary-foreground: 0 0% 10%; /* Dark text */
     --sidebar-accent: 240 65% 65%; /* Deep Indigo/Navy */
     --sidebar-accent-foreground: 0 0% 100%; /* White */
     --sidebar-border: 240 10% 15%;
-    --sidebar-ring: 330 80% 60%; /* Less Bright */
+    --sidebar-ring: 330 70% 65%; /* Softer Pink */
   }
 }
 
