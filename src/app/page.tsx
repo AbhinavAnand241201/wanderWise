@@ -3,6 +3,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { AppHeader } from "@/components/app-header";
+import CardStack from "@/components/card-stack";
 import { ItineraryForm, type ItineraryFormValues } from "@/components/itinerary-form";
 import { ItineraryDisplay } from "@/components/itinerary-display";
 import { SuggestionsDisplay } from "@/components/suggestions-display";
@@ -105,25 +106,16 @@ export default function HomePage() {
         title: "Adventure Blueprint Ready!",
         description: "Your itinerary and suggestions are here. Explore your new plan below.",
       });
-
     } catch (err) {
-      console.error("Error during plan generation:", err);
-      let displayMessage = "An unknown error occurred while generating your plan.";
-      if (err instanceof Error) {
-        if (err.message.includes("Server Components render") || err.message.includes("Cannot read properties of null (reading 'text')")) {
-          displayMessage = "Failed to generate plan due to a server-side issue. Please ensure API keys and configurations are correctly set up in your deployment environment."
-        } else {
-          displayMessage = `Failed to generate plan: ${err.message}`;
-        }
-      }
-      setError(displayMessage);
+      console.error("Error generating itinerary:", err);
+      setError("Failed to generate itinerary. Please try again.");
       toast({
-        title: "Error Generating Plan",
-        description: displayMessage,
+        title: "Error",
+        description: "Failed to generate itinerary. Please try again.",
         variant: "destructive",
       });
     } finally {
-      setLoading(false); 
+      setLoading(false);
     }
   };
   
@@ -210,8 +202,27 @@ export default function HomePage() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-background font-sans">
+    <div className="min-h-screen bg-background">
       <AppHeader />
+      
+      {/* CardStack component now handles the entire hero section */}
+      <CardStack />
+      
+      {/* Scroll indicator */}
+      <button 
+        onClick={handleScrollToPlanner}
+        className="group fixed bottom-8 left-1/2 z-50 -translate-x-1/2 animate-bounce"
+        aria-label="Scroll to planner"
+      >
+        <div className="flex h-12 w-8 flex-col items-center">
+          <span className="text-sm font-medium text-foreground/80 group-hover:text-foreground">
+            Scroll
+          </span>
+          <div className="mt-1 h-4 w-4 rounded-full border-2 border-foreground/80 group-hover:border-foreground">
+            <div className="mx-auto h-1 w-0.5 animate-bounce bg-foreground/80 group-hover:bg-foreground" />
+          </div>
+        </div>
+      </button>
       <main className="flex-grow">
         {!showResults ? (
           <>
@@ -255,10 +266,21 @@ export default function HomePage() {
             </section>
 
             <section ref={plannerRef} className="py-20 bg-card">
-              <div className="container mx-auto px-4 max-w-3xl">
-                <ItineraryForm onSubmit={handleGeneratePlan} loading={loading} />
+            <div className="container mx-auto px-4 max-w-3xl">
+              <div className="mx-auto max-w-3xl rounded-2xl bg-background p-6 shadow-lg">
+                <div className="mb-8 text-center">
+                  <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Plan Your Next Adventure</h2>
+                  <p className="mt-4 text-lg text-muted-foreground">
+                    Let our AI create a personalized travel itinerary just for you
+                  </p>
+                </div>
+                <ItineraryForm 
+                  onSubmit={handleGeneratePlan} 
+                  loading={loading}
+                />
               </div>
-            </section>
+            </div>
+          </section>
           </>
         ) : (
           <div ref={resultsRef} className="container mx-auto p-4 md:p-6 lg:p-8 mt-8 animate-fade-in-up">
