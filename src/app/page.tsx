@@ -110,7 +110,11 @@ export default function HomePage() {
       console.error("Error during plan generation:", err);
       let displayMessage = "An unknown error occurred while generating your plan.";
       if (err instanceof Error) {
+        if (err.message.includes("Server Components render") || err.message.includes("Cannot read properties of null (reading 'text')")) {
+          displayMessage = "Failed to generate plan due to a server-side issue. Please ensure API keys and configurations are correctly set up in your deployment environment."
+        } else {
           displayMessage = `Failed to generate plan: ${err.message}`;
+        }
       }
       setError(displayMessage);
       toast({
@@ -211,11 +215,10 @@ export default function HomePage() {
       <main className="flex-grow">
         {!showResults ? (
           <>
-            <section className="relative h-[80vh] min-h-[600px] flex items-center justify-center text-center text-white bg-cover bg-center" style={{backgroundImage: "url('https://placehold.co/1920x1080.png')"}} data-ai-hint="serene kyoto temple">
-              <div className="absolute inset-0 bg-black/50"></div>
+            <section className="relative h-[80vh] min-h-[600px] flex items-center justify-center text-center text-foreground bg-gradient-to-b from-background via-background to-card">
               <div className="relative container mx-auto px-4 z-10 animate-fade-in-up">
-                <h1 className="text-4xl md:text-6xl font-bold tracking-tight drop-shadow-lg">Craft your perfect journey, powered by AI.</h1>
-                <p className="mt-4 max-w-2xl mx-auto text-lg md:text-xl text-gray-200 drop-shadow-md">From custom itineraries to packing lists and local suggestions, WanderWise turns your travel dreams into a seamless reality. Tell us your destination, and let's begin the adventure.</p>
+                <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-foreground">Craft your perfect journey, powered by AI.</h1>
+                <p className="mt-4 max-w-2xl mx-auto text-lg md:text-xl text-muted-foreground">From custom itineraries to packing lists and local suggestions, WanderWise turns your travel dreams into a seamless reality. Tell us your destination, and let's begin the adventure.</p>
                 <Button onClick={handleScrollToPlanner} size="lg" className="mt-8 text-lg font-bold">
                   Start Planning Now <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
@@ -352,3 +355,5 @@ export default function HomePage() {
     </div>
   );
 }
+
+    
