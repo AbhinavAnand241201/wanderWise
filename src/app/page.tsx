@@ -13,16 +13,15 @@ import { suggestPlaces, type SuggestPlacesOutput } from "@/ai/flows/suggest-plac
 import { generatePackingList, type PackingListItem } from "@/ai/flows/generate-packing-list";
 import { PackingListDisplay } from "@/components/packing-list-display";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Terminal, Info, CalendarDays } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Terminal, MapPin, Sparkles, Compass, Edit, ArrowRight, Loader2, FileDown, Plane, Map, Forward } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { Skeleton } from "@/components/ui/skeleton";
 import type { GetWeatherAndAirQualityOutput } from "@/ai/flows/get-weather-and-air-quality";
 import Link from "next/link";
-import { Button } from "@/components/ui/button"; // Added Button import
-import { Loader2 } from "lucide-react"; // Added Loader2 import
+import { Button } from "@/components/ui/button";
 
 export default function HomePage() {
   const [formData, setFormData] = useState<ItineraryFormValues | null>(null);
@@ -34,7 +33,21 @@ export default function HomePage() {
   const [loading, setLoading] = useState(false);
   const [loadingPackingList, setLoadingPackingList] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showResults, setShowResults] = useState(false);
+
   const { toast } = useToast();
+  const plannerRef = useRef<HTMLDivElement>(null);
+  const resultsRef = useRef<HTMLDivElement>(null);
+
+  const handleScrollToPlanner = () => {
+    plannerRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    if (showResults) {
+      resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [showResults]);
 
   const handleWeatherDataFetched = (data: GetWeatherAndAirQualityOutput | null) => {
     setWeatherDataForPacking(data);
@@ -54,7 +67,6 @@ export default function HomePage() {
       toast({
         title: "WanderWise AI is Thinking...",
         description: "Crafting your personalized adventure. This might take a moment!",
-        variant: "default",
       });
 
       const itineraryPromise = generateItinerary({
@@ -78,37 +90,27 @@ export default function HomePage() {
       if (itineraryResult.itinerary && itineraryResult.itinerary.length > 0) {
         setItinerary(itineraryResult.itinerary);
       } else {
-        console.warn("Itinerary generated successfully but is empty or invalid:", itineraryResult);
         setItinerary([]); 
         toast({
           title: "Itinerary Note",
-          description: "The AI couldn't create a detailed schedule. Try being more specific with your interests!",
-          variant: "default",
+          description: "The AI couldn't create a detailed schedule. Try being more specific!",
+          variant: "destructive",
         });
       }
 
-      if (suggestionsResult) {
-        setSuggestions(suggestionsResult);
-      } else {
-        console.warn("Suggestions were not generated or are invalid:", suggestionsResult);
-        setSuggestions({ hotels: [], restaurants: [], activities: []});
-      }
+      setSuggestions(suggestionsResult);
+      setShowResults(true);
       
       toast({
         title: "Adventure Blueprint Ready!",
-        description: "Your itinerary and suggestions are here. Fetching weather and packing list next...",
-        variant: "default",
+        description: "Your itinerary and suggestions are here. Explore your new plan below.",
       });
 
     } catch (err) {
-      console.error("Error during plan generation:", err); // Log the full error for server-side debugging
+      console.error("Error during plan generation:", err);
       let displayMessage = "An unknown error occurred while generating your plan.";
       if (err instanceof Error) {
-        if (err.message.includes("Server Components render") || err.message.includes("Cannot read properties of null (reading 'text')") ) { // Common Genkit error if API fails
-          displayMessage = "Failed to generate plan due to a server-side issue. Please ensure API keys and configurations are correctly set up in your deployment environment.";
-        } else {
           displayMessage = `Failed to generate plan: ${err.message}`;
-        }
       }
       setError(displayMessage);
       toast({
@@ -131,11 +133,6 @@ export default function HomePage() {
           if (weatherDataForPacking?.forecasts && weatherDataForPacking.forecasts.length > 0) {
             const todayForecast = weatherDataForPacking.forecasts[0];
             weatherSummary = `Expected weather: ${todayForecast.condition} with temperatures around ${todayForecast.minTempC}°C to ${todayForecast.maxTempC}°C.`;
-            if (weatherDataForPacking.airQuality) {
-              weatherSummary += ` Air quality is ${weatherDataForPacking.airQuality.category} (AQI: ${weatherDataForPacking.airQuality.aqi}).`;
-            }
-          } else if (weatherDataForPacking?.error) {
-             weatherSummary += ` Weather data fetch had an error: ${weatherDataForPacking.error}. Pack generally.`;
           }
 
           const packingListResponse = await generatePackingList({
@@ -145,22 +142,12 @@ export default function HomePage() {
             weatherSummary: weatherSummary,
           });
 
-          if (packingListResponse && packingListResponse.items && packingListResponse.items.length > 0) {
+          if (packingListResponse?.items) {
             setPackingList(packingListResponse.items);
-            toast({
-              title: "Essential Packing List Ready!",
-              description: "Your smart list of 5 must-have items is here.",
-            });
           } else {
-            console.warn("Packing list generated but is empty or invalid:", packingListResponse);
-            setPackingList([]); 
-            toast({
-              title: "Packing List Note",
-              description: "The AI couldn't generate a packing list for this trip. Showing defaults.",
-            });
+            setPackingList([]);
           }
         } catch (packingErr) {
-          console.error("Error generating packing list:", packingErr);
           const packErrMsg = packingErr instanceof Error ? packingErr.message : "Could not generate packing list."
           toast({
             title: "Error Generating Packing List",
@@ -174,216 +161,190 @@ export default function HomePage() {
       };
       generateAndSetPackingList();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [itinerary, formData, weatherDataForPacking, loading]);
+  }, [itinerary, formData, weatherDataForPacking, loading, packingList, loadingPackingList, toast]);
 
+  const itineraryContentRef = useRef<HTMLDivElement>(null);
+  const handleExportPDF = async () => {
+    const element = itineraryContentRef.current;
+    if (!element) return;
+    toast({ title: "Generating PDF..." });
+    const canvas = await html2canvas(element, { scale: 2, useCORS: true });
+    const imgData = canvas.toDataURL('image/png');
+    const pdf = new jsPDF('p', 'px', 'a4');
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = pdf.internal.pageSize.getHeight();
+    const imgWidth = canvas.width;
+    const imgHeight = canvas.height;
+    const ratio = imgWidth / pdfWidth;
+    const scaledHeight = imgHeight / ratio;
+    let heightLeft = scaledHeight;
+    let position = 0;
 
-  const handleExportPDF = async (element: HTMLElement | null) => {
-    if (!element) {
-      toast({ title: "Error", description: "Could not find content to export.", variant: "destructive" });
-      return;
+    pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, scaledHeight);
+    heightLeft -= pdfHeight;
+
+    while (heightLeft > 0) {
+      position = heightLeft - scaledHeight;
+      pdf.addPage();
+      pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, scaledHeight);
+      heightLeft -= pdfHeight;
     }
-
-    toast({ title: "Generating PDF...", description: "Please wait, this can take a moment." });
-
-    try {
-      const accordions = element.querySelectorAll('div[data-state="closed"]');
-      accordions.forEach(acc => (acc as HTMLElement).setAttribute('data-state', 'open'));
-      
-      const images = Array.from(element.querySelectorAll('img'));
-      await Promise.all(
-        images.map(img => {
-          if (img.complete) return Promise.resolve();
-          return new Promise(resolve => {
-            img.onload = img.onerror = resolve;
-          });
-        })
-      );
-      
-      await new Promise(resolve => setTimeout(resolve, 500)); 
-
-      const canvas = await html2canvas(element, {
-        scale: 1.5, 
-        useCORS: true,
-        logging: true,
-        scrollX: 0,
-        scrollY: -window.scrollY, 
-        windowWidth: element.scrollWidth,
-        windowHeight: element.scrollHeight,
-        removeContainer: true, 
-      });
-
-      accordions.forEach(acc => (acc as HTMLElement).setAttribute('data-state', 'closed'));
-
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF({
-        orientation: 'p', 
-        unit: 'pt', 
-        format: 'a4', 
-        putOnlyUsedFonts: true,
-        compress: true,
-      });
-
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-      
-      const imgProps = pdf.getImageProperties(imgData);
-      const canvasWidth = imgProps.width;
-      const canvasHeight = imgProps.height;
-
-      const ratio = canvasWidth / pdfWidth;
-      const scaledCanvasHeight = canvasHeight / ratio;
-      
-      let yPosition = 0;
-      let pageCount = 0;
-
-      while(yPosition < scaledCanvasHeight) {
-        if (pageCount > 0) pdf.addPage();
-        
-        const pageCanvasHeight = Math.min(pdfHeight, scaledCanvasHeight - yPosition);
-        const sourceY = yPosition * ratio;
-        const sourceHeight = pageCanvasHeight * ratio;
-
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = canvasWidth;
-        tempCanvas.height = sourceHeight;
-        const tempCtx = tempCanvas.getContext('2d');
-        if (tempCtx) {
-            tempCtx.drawImage(canvas, 0, sourceY, canvasWidth, sourceHeight, 0, 0, canvasWidth, sourceHeight);
-            const pageImgData = tempCanvas.toDataURL('image/png');
-            pdf.addImage(pageImgData, 'PNG', 0, 0, pdfWidth, pageCanvasHeight);
-        }
-        
-        yPosition += pageCanvasHeight;
-        pageCount++;
-        if (pageCount > 20) { // Safety break for very long content
-            console.warn("PDF export exceeded 20 pages, stopping.");
-            break;
-        }
-      }
-
-      pdf.save(`WanderWise_Itinerary_${formData?.destination.replace(/[^a-zA-Z0-9]/g, '_') || 'Trip'}.pdf`);
-      toast({ title: "PDF Exported!", description: "Your itinerary has been saved." });
-    } catch (e) {
-      console.error("Error generating PDF:", e);
-      toast({ title: "PDF Export Failed", description: "An error occurred. The content might be too complex or an image failed to load.", variant: "destructive" });
-    }
+    pdf.save(`WanderWise_Itinerary_${formData?.destination || 'Trip'}.pdf`);
+    toast({ title: "PDF Exported!" });
   };
 
   const handleRouteFetched = (polyline: string | null) => {
     setCurrentRoutePolyline(polyline);
   };
+  
+  const handleEdit = () => {
+    setShowResults(false);
+    setItinerary(null);
+    setSuggestions(null);
+    setPackingList(null);
+    setWeatherDataForPacking(null);
+  }
 
   return (
-    <div className="flex flex-col min-h-screen bg-background font-sans selection:bg-accent selection:text-accent-foreground">
+    <div className="flex flex-col min-h-screen bg-background font-sans">
       <AppHeader />
-      <main className="flex-grow container mx-auto p-4 md:p-6 lg:p-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 items-start">
-          
-          <div className="lg:col-span-1 space-y-6 md:space-y-8 lg:sticky lg:top-24">
-            <ItineraryForm onSubmit={handleGeneratePlan} loading={loading} />
+      <main className="flex-grow">
+        {!showResults ? (
+          <>
+            <section className="relative h-[80vh] min-h-[600px] flex items-center justify-center text-center text-white bg-cover bg-center" style={{backgroundImage: "url('https://placehold.co/1920x1080.png')"}} data-ai-hint="serene kyoto temple">
+              <div className="absolute inset-0 bg-black/50"></div>
+              <div className="relative container mx-auto px-4 z-10 animate-fade-in-up">
+                <h1 className="text-4xl md:text-6xl font-bold tracking-tight drop-shadow-lg">Craft your perfect journey, powered by AI.</h1>
+                <p className="mt-4 max-w-2xl mx-auto text-lg md:text-xl text-gray-200 drop-shadow-md">From custom itineraries to packing lists and local suggestions, WanderWise turns your travel dreams into a seamless reality. Tell us your destination, and let's begin the adventure.</p>
+                <Button onClick={handleScrollToPlanner} size="lg" className="mt-8 text-lg font-bold">
+                  Start Planning Now <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
+              </div>
+            </section>
             
-            {loading && !suggestions && ( 
-              <Card className="shadow-xl animate-pulse bg-card/80 backdrop-blur-sm">
-                <CardHeader><Skeleton className="h-8 w-3/4 rounded-md bg-muted/70" /></CardHeader>
-                <CardContent className="space-y-4 pt-4">
-                  <Skeleton className="h-6 w-full rounded-md bg-muted/70" />
-                  <Skeleton className="h-24 w-full rounded-lg bg-muted/70" />
-                  <Skeleton className="h-24 w-full rounded-lg bg-muted/70" />
-                </CardContent>
-              </Card>
-            )}
-            {suggestions && !loading && <SuggestionsDisplay suggestions={suggestions} />}
-          </div>
+            <section className="py-20 bg-background text-foreground">
+              <div className="container mx-auto px-4 text-center">
+                 <h2 className="text-3xl font-bold mb-12">How It Works</h2>
+                 <div className="grid md:grid-cols-3 gap-12">
+                   <div className="flex flex-col items-center">
+                     <div className="bg-primary/10 p-5 rounded-full mb-4">
+                       <MapPin className="h-10 w-10 text-primary" />
+                     </div>
+                     <h3 className="text-xl font-semibold mb-2">1. Tell Us Your Trip</h3>
+                     <p className="text-muted-foreground">Provide your destination, budget, and interests to start the planning process.</p>
+                   </div>
+                   <div className="flex flex-col items-center">
+                     <div className="bg-primary/10 p-5 rounded-full mb-4">
+                       <Sparkles className="h-10 w-10 text-primary" />
+                     </div>
+                     <h3 className="text-xl font-semibold mb-2">2. Get Your AI Plan</h3>
+                     <p className="text-muted-foreground">Instantly receive a detailed, day-by-day itinerary tailored just for you.</p>
+                   </div>
+                   <div className="flex flex-col items-center">
+                     <div className="bg-primary/10 p-5 rounded-full mb-4">
+                       <Compass className="h-10 w-10 text-primary" />
+                     </div>
+                     <h3 className="text-xl font-semibold mb-2">3. Explore with Confidence</h3>
+                     <p className="text-muted-foreground">Use our interactive map, local suggestions, and essential checklists.</p>
+                   </div>
+                 </div>
+              </div>
+            </section>
 
-          <div className="lg:col-span-2 space-y-6 md:space-y-8">
+            <section ref={plannerRef} className="py-20 bg-card">
+              <div className="container mx-auto px-4 max-w-3xl">
+                <ItineraryForm onSubmit={handleGeneratePlan} loading={loading} />
+              </div>
+            </section>
+          </>
+        ) : (
+          <div ref={resultsRef} className="container mx-auto p-4 md:p-6 lg:p-8 mt-8 animate-fade-in-up">
             {error && (
-              <Alert variant="destructive" className="shadow-xl border-destructive/70 bg-destructive/10 backdrop-blur-sm">
-                <Terminal className="h-5 w-5" />
-                <AlertTitle className="text-lg font-semibold">Oops! Something Went Wrong.</AlertTitle>
-                <AlertDescription className="text-base">{error}</AlertDescription>
+              <Alert variant="destructive" className="mb-8">
+                <Terminal className="h-4 w-4" />
+                <AlertTitle>Oops! Something Went Wrong.</AlertTitle>
+                <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
 
-            {loading && !itinerary && ( 
-              <Card className="shadow-xl animate-pulse bg-card/80 backdrop-blur-sm">
-                <CardHeader><Skeleton className="h-8 w-1/2 rounded-md bg-muted/70" /></CardHeader>
-                <CardContent className="space-y-3 pt-4">
-                  <Skeleton className="h-6 w-3/4 rounded-md bg-muted/70" />
-                  <Skeleton className="h-5 w-full rounded-md bg-muted/70" />
-                  <Skeleton className="h-5 w-5/6 rounded-md bg-muted/70" />
-                  <Skeleton className="h-5 w-full rounded-md bg-muted/70" />
-                </CardContent>
-              </Card>
+            {/* Summary Bar */}
+            {formData && (
+              <div className="flex flex-wrap items-center justify-between gap-4 p-4 mb-8 rounded-xl bg-card border">
+                <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+                   <h2 className="text-2xl font-bold text-primary">{formData.destination}</h2>
+                   <div className="flex items-center gap-4 text-muted-foreground">
+                      <span>${formData.budget}</span>
+                      <span className="hidden md:block">|</span>
+                      <span className="truncate max-w-[200px]">{formData.interests}</span>
+                   </div>
+                </div>
+                <div className="flex items-center gap-2">
+                    <Button onClick={handleExportPDF} variant="outline" className="text-secondary border-secondary hover:bg-secondary/10 hover:text-secondary">
+                        <FileDown className="h-4 w-4 mr-2" /> Export PDF
+                    </Button>
+                    <Button onClick={handleEdit} variant="outline">
+                        <Edit className="h-4 w-4 mr-2" /> Edit Plan
+                    </Button>
+                </div>
+              </div>
             )}
-
-            {itinerary && !loading && formData && (
-              <ItineraryDisplay
-                itinerary={itinerary}
-                destination={formData.destination}
-                onExportPDF={handleExportPDF}
-                onRouteFetched={handleRouteFetched}
-              />
-            )}
-
-            {!loading && !itinerary && !error && !formData && (
-                 <Card className="shadow-2xl bg-primary text-primary-foreground border-none transition-all hover:shadow-primary/40 hover:shadow-2xl">
-                    <CardHeader className="pb-3">
-                        <CardTitle className="text-3xl font-extrabold flex items-center gap-2.5 drop-shadow-md">
-                          <CalendarDays size={36} className="text-accent"/> Welcome to WanderWise!
-                        </CardTitle>
-                        <CardDescription className="text-primary-foreground/90 text-lg pt-1.5">Your AI-powered journey planner. Fill the form to begin your adventure!</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <p className="text-primary-foreground/80 text-base">Let's turn your travel dreams into reality, one smart plan at a time.</p>
-                    </CardContent>
-                </Card>
-            )}
-
-            {formData && (itinerary || loading) && (
-              <>
-                {(loading && (!itinerary || itinerary.length === 0)) && (
-                  <Skeleton className="h-[400px] w-full rounded-xl shadow-xl bg-muted/70" />
-                )}
-                <MapDisplayWrapper
-                  destination={formData.destination}
-                  routePolyline={currentRoutePolyline}
-                />
-                <WeatherDisplay 
-                  location={formData.destination} 
-                  onWeatherDataFetched={handleWeatherDataFetched} 
-                />
-              </>
-            )}
-
-            {loadingPackingList && formData && (
-              <Card className="shadow-xl mt-8 animate-pulse bg-card/80 backdrop-blur-sm">
-                <CardHeader><Skeleton className="h-8 w-3/4 rounded-md bg-muted/70" /></CardHeader>
-                <CardContent className="space-y-4 pt-4">
-                    <Skeleton className="h-6 w-full rounded-md bg-muted/70" />
-                    <Skeleton className="h-20 w-full rounded-lg bg-muted/70" />
-                </CardContent>
-              </Card>
-            )}
-            {packingList && !loadingPackingList && formData && (
-              <PackingListDisplay packingListItems={packingList} destination={formData.destination} />
-            )}
-            {!loading && !loadingPackingList && packingList === null && itinerary && formData && (
-                 <Card className="shadow-xl mt-8 bg-muted/50 backdrop-blur-sm">
-                    <CardHeader><CardTitle className="text-primary/90">Preparing Your Packing List...</CardTitle></CardHeader>
-                    <CardContent>
-                        <p className="text-muted-foreground">Just a moment, curating essentials for your trip to {formData.destination}.</p>
-                    </CardContent>
-                </Card>
+            
+            {loading ? (
+              <div className="space-y-4">
+                <Skeleton className="h-12 w-1/3 rounded-lg" />
+                <Skeleton className="h-60 w-full rounded-lg" />
+              </div>
+            ) : (
+              <Tabs defaultValue="itinerary" className="w-full">
+                <TabsList className="grid w-full grid-cols-3 mb-6">
+                  <TabsTrigger value="itinerary"><Plane className="h-4 w-4 mr-2"/>Itinerary</TabsTrigger>
+                  <TabsTrigger value="map-suggestions"><Map className="h-4 w-4 mr-2"/>Map & Suggestions</TabsTrigger>
+                  <TabsTrigger value="trip-essentials"><Forward className="h-4 w-4 mr-2"/>Trip Essentials</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="itinerary">
+                  {itinerary && formData && (
+                     <div ref={itineraryContentRef}>
+                        <ItineraryDisplay
+                            itinerary={itinerary}
+                            destination={formData.destination}
+                            onRouteFetched={handleRouteFetched}
+                        />
+                     </div>
+                  )}
+                </TabsContent>
+                <TabsContent value="map-suggestions">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <MapDisplayWrapper
+                            destination={formData?.destination || ""}
+                            routePolyline={currentRoutePolyline}
+                        />
+                        {suggestions && <SuggestionsDisplay suggestions={suggestions} />}
+                    </div>
+                </TabsContent>
+                <TabsContent value="trip-essentials">
+                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        {loadingPackingList ? (
+                           <Skeleton className="h-60 w-full rounded-lg" />
+                        ) : (
+                           packingList && formData && <PackingListDisplay packingListItems={packingList} destination={formData.destination} />
+                        )}
+                         <WeatherDisplay 
+                            location={formData?.destination || ""} 
+                            onWeatherDataFetched={handleWeatherDataFetched} 
+                        />
+                     </div>
+                </TabsContent>
+              </Tabs>
             )}
           </div>
-        </div>
+        )}
       </main>
-      <footer className="text-center p-6 text-muted-foreground/80 text-sm border-t border-border/50 mt-12 bg-background/50 backdrop-blur-sm">
-        <p>© {new Date().getFullYear()} WanderWise where Adventure Awaits , Plan Smart!</p>
-        <p className="mt-1">Made with love and effort by Abhinav.</p>
+      <footer className="text-center p-6 text-muted-foreground text-sm border-t mt-12 bg-card">
+        <p>© {new Date().getFullYear()} WanderWise - Craft your perfect journey.</p>
+         <p className="mt-1">Made with love and effort by Abhinav.</p>
         <p className="mt-1">
-          <Link href="https://portfolio-latest-steel.vercel.app" target="_blank" rel="noopener noreferrer" className="text-primary hover:text-accent underline transition-colors">
+          <Link href="https://portfolio-latest-steel.vercel.app" target="_blank" rel="noopener noreferrer" className="text-primary/80 hover:text-primary underline transition-colors">
             see more of my work
           </Link>
         </p>
@@ -391,4 +352,3 @@ export default function HomePage() {
     </div>
   );
 }
-    

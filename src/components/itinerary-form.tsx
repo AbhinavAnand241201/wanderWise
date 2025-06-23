@@ -48,13 +48,13 @@ export function ItineraryForm({ onSubmit, loading }: ItineraryFormProps) {
   });
 
   return (
-    <Card className="shadow-2xl bg-card/95 backdrop-blur-sm border-primary/20">
-      <CardHeader className="border-b border-primary/10 pb-4">
-        <CardTitle className="text-2xl font-extrabold text-primary flex items-center gap-2">
-          <Sparkles className="h-7 w-7 text-accent animate-pulse" />
+    <Card className="shadow-2xl bg-card backdrop-blur-sm border">
+      <CardHeader className="border-b pb-4">
+        <CardTitle className="text-3xl font-bold text-foreground flex items-center gap-3">
+          <Sparkles className="h-8 w-8 text-primary" />
           Plan Your Dream Trip
         </CardTitle>
-        <CardDescription className="text-muted-foreground pt-1">Tell us about your adventure, and we'll craft the magic!</CardDescription>
+        <CardDescription className="text-muted-foreground pt-1">Fill out the details below to get started.</CardDescription>
       </CardHeader>
       <CardContent className="pt-6">
         <Form {...form}>
@@ -64,11 +64,11 @@ export function ItineraryForm({ onSubmit, loading }: ItineraryFormProps) {
               name="destination"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="flex items-center gap-2 text-base font-semibold text-foreground/90">
+                  <FormLabel className="flex items-center gap-2 text-base font-semibold">
                     <MapPin className="h-5 w-5 text-primary" /> Destination
                   </FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., Kyoto, Japan" {...field} className="text-sm py-5 bg-background border-border focus:border-primary focus:ring-primary/50 shadow-sm"/>
+                    <Input placeholder="e.g., Kyoto, Japan" {...field} className="text-base py-6"/>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -79,11 +79,11 @@ export function ItineraryForm({ onSubmit, loading }: ItineraryFormProps) {
               name="budget"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="flex items-center gap-2 text-base font-semibold text-foreground/90">
+                  <FormLabel className="flex items-center gap-2 text-base font-semibold">
                     <DollarSign className="h-5 w-5 text-primary" /> Budget (USD)
                   </FormLabel>
                   <FormControl>
-                    <Input type="number" placeholder="e.g., 2000" {...field} className="text-sm py-5 bg-background border-border focus:border-primary focus:ring-primary/50 shadow-sm"/>
+                    <Input type="number" placeholder="e.g., 2000" {...field} className="text-base py-6"/>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -94,14 +94,14 @@ export function ItineraryForm({ onSubmit, loading }: ItineraryFormProps) {
               name="interests"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="flex items-center gap-2 text-base font-semibold text-foreground/90">
+                  <FormLabel className="flex items-center gap-2 text-base font-semibold">
                     <Briefcase className="h-5 w-5 text-primary" /> Interests & Activities
                   </FormLabel>
                   <FormControl>
                     <Textarea
                       placeholder="e.g., temples, ramen tasting, bullet train, traditional markets"
                       {...field}
-                      className="text-sm min-h-[120px] bg-background border-border focus:border-primary focus:ring-primary/50 shadow-sm"
+                      className="text-base min-h-[120px]"
                     />
                   </FormControl>
                   <FormMessage />
@@ -111,7 +111,7 @@ export function ItineraryForm({ onSubmit, loading }: ItineraryFormProps) {
             <Button 
               type="submit" 
               disabled={loading} 
-              className="w-full text-lg py-6 font-bold bg-primary text-primary-foreground hover:bg-primary/90 transition-opacity duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
+              className="w-full text-lg py-7 font-bold transition-all duration-300 shadow-lg hover:shadow-primary/40 transform hover:scale-105"
             >
               {loading ? (
                 <>

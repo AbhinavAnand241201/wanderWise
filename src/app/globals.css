@@ -5,99 +5,69 @@
 
 @layer base {
   :root {
-    /* Vibrant Blue & Sunny Orange/Yellow Theme (Light Mode) */
-    --background: 210 60% 97%; /* Lighter, slightly bluer background */
-    --foreground: 210 25% 20%; /* Dark Slate Blue for text */
+    /* Light Theme: Professional & Clean */
+    --background: 220 20% 98%; /* Very light cool gray */
+    --foreground: 220 25% 10%; /* Almost black */
 
     --card: 0 0% 100%; /* White */
-    --card-foreground: 210 25% 20%; /* Dark Slate Blue */
+    --card-foreground: 220 25% 10%;
 
-    --popover: 0 0% 100%; /* White */
-    --popover-foreground: 210 25% 20%; /* Dark Slate Blue */
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 25% 10%;
 
-    --primary: 215 85% 55%; /* Vibrant, slightly softer Blue */
-    --primary-foreground: 0 0% 100%; /* White */
+    --primary: 293 80% 58%; /* Magenta */
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 50% 88%; /* Light Sky Blue */
-    --secondary-foreground: 210 25% 25%; /* Darker Slate Blue for contrast */
+    --secondary: 165 100% 38%; /* Teal */
+    --secondary-foreground: 0 0% 100%;
 
-    --muted: 210 40% 94%; /* Very Light Blue-Gray */
-    --muted-foreground: 210 25% 45%; /* Mid Gray-Blue */
+    --muted: 220 20% 94%; /* Light gray */
+    --muted-foreground: 220 15% 45%;
 
-    --accent: 35 100% 58%; /* Bright, sunny Orange */
-    --accent-foreground: 210 25% 15%; /* Darker for contrast on orange */
+    --accent: 165 100% 38%; /* Teal */
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 70% 50%; /* Strong Red */
-    --destructive-foreground: 0 0% 100%; /* White */
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 210 30% 85%; /* Soft Blue-Gray Border */
-    --input: 210 30% 90%; /* Light Blue-Gray Input Background */
-    --ring: 215 80% 65%; /* Brighter Blue for focus rings */
+    --border: 220 20% 90%;
+    --input: 220 20% 90%;
+    --ring: 293 80% 58%; /* Magenta for focus */
 
-    --chart-1: 215 85% 55%; /* Vibrant Blue */
-    --chart-2: 35 100% 58%; /* Bright Orange */
-    --chart-3: 190 70% 50%; /* Teal */
-    --chart-4: 280 70% 60%; /* Purple */
-    --chart-5: 50 90% 55%; /* Yellow */
-    
-    --radius: 0.75rem; /* Slightly larger radius for a modern feel */
-
-    /* Sidebar colors adjusted to match theme */
-    --sidebar-background: 210 50% 95%; /* Light, clean blue-gray */
-    --sidebar-foreground: 210 25% 25%;
-    --sidebar-primary: 215 85% 55%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 35 100% 58%;
-    --sidebar-accent-foreground: 210 25% 15%;
-    --sidebar-border: 210 30% 80%;
-    --sidebar-ring: 215 80% 65%;
+    --radius: 1rem; /* 16px */
   }
 
   .dark {
-    /* Dark Theme: Black Background, Radiant Pink Primary */
-    --background: 0 0% 4%; /* Almost Black */
-    --foreground: 0 0% 95%; /* Light Gray for text */
+    /* Dark Theme: Sophisticated Navy & Magenta */
+    --background: 232 33% 14%; /* #1A1A2E - background-navy */
+    --foreground: 215 14% 95%; /* #F3F4F6 - text-primary */
 
-    --card: 240 10% 10%; /* Dark Blue-ish Gray */
-    --card-foreground: 0 0% 95%; /* Light Gray */
+    --card: 215 28% 17%;      /* #1F2937 - panel-navy */
+    --card-foreground: 215 14% 95%;
 
-    --popover: 240 10% 8%; /* Darker Popover */
-    --popover-foreground: 0 0% 95%; /* Light Gray */
+    --popover: 215 28% 17%;
+    --popover-foreground: 215 14% 95%;
 
-    --primary: 330 90% 55%; /* Radiant Bright Pink/Magenta - Less Bright */
-    --primary-foreground: 0 0% 10%; /* Dark text for contrast on bright pink */
+    --primary: 293 96% 62%;  /* #E040FB - accent-magenta */
+    --primary-foreground: 215 14% 95%;
 
-    --secondary: 270 60% 60%; /* Purple - remains secondary */
-    --secondary-foreground: 0 0% 100%; /* White */
+    --secondary: 165 100% 38%; /* #00C49A - accent-teal */
+    --secondary-foreground: 0 0% 100%;
 
-    --muted: 240 5% 15%; /* Dark Muted Blue-Gray */
-    --muted-foreground: 0 0% 65%; /* Mid Gray */
+    --muted: 215 28% 25%;
+    --muted-foreground: 215 14% 65%; /* #9CA3AF - text-secondary */
 
-    --accent: 240 65% 65%; /* Deep Indigo/Navy - new accent */
-    --accent-foreground: 0 0% 100%; /* White */
+    --accent: 165 100% 38%;      /* #00C49A - accent-teal */
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 70% 55%; /* Vivid Red */
-    --destructive-foreground: 0 0% 100%; /* White */
+    --destructive: 0 70% 55%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 240 10% 20%; /* Darker Border */
-    --input: 240 10% 18%; /* Dark Input Background */
-    --ring: 330 80% 60%; /* Bright Pink for focus rings - Less Bright */
-
-    --chart-1: 330 90% 55%; /* New Primary color - Pink - Less Bright */
-    --chart-2: 240 65% 65%; /* New Accent color - Indigo */
-    --chart-3: 270 60% 60%; /* Secondary color - Purple */
-    --chart-4: 190 70% 55%; /* A Teal/Cyan for variation */
-    --chart-5: 50 90% 60%; /* A Yellow for variation */
-
-    /* Sidebar dark colors based on new theme */
-    --sidebar-background: 0 0% 8%;
-    --sidebar-foreground: 0 0% 90%;
-    --sidebar-primary: 330 90% 55%; /* Radiant Pink - Less Bright */
-    --sidebar-primary-foreground: 0 0% 10%; /* Dark text */
-    --sidebar-accent: 240 65% 65%; /* Deep Indigo/Navy */
-    --sidebar-accent-foreground: 0 0% 100%; /* White */
-    --sidebar-border: 240 10% 15%;
-    --sidebar-ring: 330 80% 60%; /* Less Bright */
+    --border: 215 28% 22%;
+    --input: 215 28% 22%;
+    --ring: 293 96% 62%; /* Magenta for focus */
+    
+    --radius: 1rem; /* 16px */
   }
 }
 
