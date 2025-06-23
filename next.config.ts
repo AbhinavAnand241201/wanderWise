@@ -1,11 +1,6 @@
-import type {NextConfig} from 'next';
-// It's good practice to import the webpack type if you're going to reference its properties,
-// though for simple alias changes like this, it might not be strictly necessary.
-// import type { Configuration as WebpackConfiguration } from 'webpack';
-
+import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  /* config options here */
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -28,18 +23,38 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // External packages that should only be used in server components
+  serverExternalPackages: ['@opentelemetry/sdk-node', 'handlebars', 'dotprompt'],
   webpack: (config, { isServer }) => {
+    // Prevent bundling of problematic modules
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      '@opentelemetry/exporter-jaeger': false,
+      'handlebars': false,
+      'async_hooks': false,
+      fs: false,
+      net: false,
+      tls: false,
+      dns: false,
+    };
+
+    // Exclude problematic modules from being processed by Next.js
     if (!isServer) {
-      // Prevent bundling of Node.js specific modules in the client bundle
-      // This tells webpack to replace 'async_hooks' with an empty module on the client
-      if (!config.resolve) {
-        config.resolve = {};
-      }
-      config.resolve.alias = {
-        ...config.resolve.alias,
-        'async_hooks': false,
-      };
+      config.externals = [
+        ...(config.externals || []),
+        '@opentelemetry/sdk-node',
+        'handlebars',
+        'dotprompt',
+        (context: { request?: string }, callback: (err: Error | null, result?: string) => void) => {
+          // Exclude handlebars and dotprompt from client-side bundle
+          if (context.request?.includes('handlebars') || context.request?.includes('dotprompt')) {
+            return callback(null, `commonjs ${context.request}`);
+          }
+          return callback(null);
+        },
+      ] as any;
     }
+
     return config;
   },
 };
