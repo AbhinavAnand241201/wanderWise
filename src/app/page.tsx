@@ -275,7 +275,7 @@ export default function HomePage() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-gradient-to-br from-background to-secondary/30 font-sans selection:bg-accent selection:text-accent-foreground">
+    <div className="flex flex-col min-h-screen bg-background font-sans selection:bg-accent selection:text-accent-foreground">
       <AppHeader />
       <main className="flex-grow container mx-auto p-4 md:p-6 lg:p-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 items-start">

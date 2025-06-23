@@ -120,7 +120,7 @@ export function WeatherDisplay({ location, onWeatherDataFetched }: WeatherDispla
             {data.forecasts && data.forecasts.length > 0 && (
               <div>
                 <h3 className="text-xl font-semibold mb-3 text-primary flex items-center gap-2"><Sunrise className="text-accent"/> Current Outlook (Today)</h3>
-                <div className="flex flex-col sm:flex-row items-center gap-4 p-4 bg-gradient-to-br from-primary/10 to-accent/10 rounded-xl shadow-lg border border-border">
+                <div className="flex flex-col sm:flex-row items-center gap-4 p-4 bg-muted/50 rounded-xl shadow-lg border border-border">
                   <div className="text-6xl">
                     {getWeatherIcon(data.forecasts[0].iconCode, data.forecasts[0].condition)}
                   </div>
